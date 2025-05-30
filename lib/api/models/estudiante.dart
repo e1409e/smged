@@ -1,13 +1,11 @@
 // lib/api/models/estudiante.dart
-import 'package:flutter/material.dart'; // Necesario para debugPrint, BuildContext, Text, DataCell
-import 'package:data_table_2/data_table_2.dart'; // Necesario para DataColumn2
-import 'package:smged/layout/widgets/custom_data_table.dart'; // Necesario para TableData
+import 'package:flutter/material.dart';
+import 'package:data_table_2/data_table_2.dart';
+import 'package:smged/layout/widgets/custom_data_table.dart';
+import 'package:smged/layout/widgets/custom_colors.dart';
 
 class Estudiante implements TableData {
-  // === CAMBIO CLAVE 1: Asegúrate de que 'idEstudiante' puede recibir null si la API lo manda como tal
-  // Y si el constructor lo requiere, es porque la API *siempre* debería mandarlo.
-  // Pero el error sugiere que no es así. Mantengámoslo int pero seamos más robustos en fromJson.
-  final int idEstudiante;
+  final int? idEstudiante;
   final String nombres;
   final String apellidos;
   final String cedula;
@@ -17,14 +15,13 @@ class Estudiante implements TableData {
   final String? direccion;
   final String? observaciones;
   final String? seguimiento;
-  // === CAMBIO CLAVE 2: Elimina discapacidadId si la API ya no lo envía ===
-  // final int? discapacidadId; // Eliminar si ya no lo usas
-  final String? discapacidad; // Propiedad para el nombre de la discapacidad (String)
+  final String? discapacidad; // Campo para el NOMBRE de la discapacidad (para visualización)
+  final int? idDiscapacidad; // ¡NUEVO CAMPO! Para el ID numérico de la discapacidad (para guardar/editar)
   final DateTime? fechaRegistro;
   final DateTime? fechaActualizacion;
 
   Estudiante({
-    required this.idEstudiante,
+    this.idEstudiante,
     required this.nombres,
     required this.apellidos,
     required this.cedula,
@@ -34,27 +31,20 @@ class Estudiante implements TableData {
     this.direccion,
     this.observaciones,
     this.seguimiento,
-    // Elimina este parámetro si eliminaste la propiedad discapacidadId
-    // this.discapacidadId,
-    this.discapacidad,
+    this.discapacidad, // Puede ser nulo si la API no lo envía al crear o si no lo necesitas siempre
+    this.idDiscapacidad, // ¡NUEVO: Este puede ser nulo en fromJson si no siempre viene, pero es requerido para el POST/PUT!
     this.fechaRegistro,
     this.fechaActualizacion,
   });
 
   factory Estudiante.fromJson(Map<String, dynamic> json) {
-    debugPrint('JSON recibido para Estudiante: $json'); // LÍNEA DE DEPURACIÓN
-
     try {
       return Estudiante(
-        // === CAMBIO CRÍTICO 1: Usar 'id_estudiante' del JSON ===
-        // Si el JSON viene con 'id_estudiante' (con guion bajo), así debe ser el mapeo.
-        // Usamos 'as int? ?? 0' para seguridad si por alguna razón sigue viniendo null.
-        idEstudiante: json['id_estudiante'] as int? ?? 0,
-
+        idEstudiante: json['id_estudiante'] as int?,
         nombres: json['nombres'] as String,
         apellidos: json['apellidos'] as String,
         cedula: json['cedula'] as String,
-        fechaNacimiento: json['fecha_nacimiento'] != null // === ¡REVISAR ESTO TAMBIÉN! ===
+        fechaNacimiento: json['fecha_nacimiento'] != null
             ? DateTime.parse(json['fecha_nacimiento'])
             : null,
         correo: json['correo'] as String?,
@@ -62,13 +52,12 @@ class Estudiante implements TableData {
         direccion: json['direccion'] as String?,
         observaciones: json['observaciones'] as String?,
         seguimiento: json['seguimiento'] as String?,
-        // === CAMBIO CRÍTICO 2: Eliminar la asignación de discapacidadId si no existe en el JSON ===
-        // discapacidadId: json['discapacidadId'] as int?, // Eliminar o comentar esta línea
-        discapacidad: json['discapacidad'] as String?, // Esta línea está bien
-        fechaRegistro: json['fecha_registro'] != null // === ¡REVISAR ESTO TAMBIÉN! ===
+        discapacidad: json['discapacidad'] as String?, // Nombre de la discapacidad
+        idDiscapacidad: json['discapacidad_id'] as int?, // ¡NUEVO: ID de la discapacidad desde la API!
+        fechaRegistro: json['fecha_registro'] != null
             ? DateTime.parse(json['fecha_registro'])
             : null,
-        fechaActualizacion: json['fecha_actualizacion'] != null // === ¡REVISAR ESTO TAMBIÉN! ===
+        fechaActualizacion: json['fecha_actualizacion'] != null
             ? DateTime.parse(json['fecha_actualizacion'])
             : null,
       );
@@ -79,49 +68,113 @@ class Estudiante implements TableData {
     }
   }
 
-  // Método para convertir el objeto Estudiante a un Map JSON (para POST/PUT)
   Map<String, dynamic> toJson() {
     return {
-      // === REVISAR ESTO PARA TU API DE ENVÍO ===
-      // Si tu API para crear/actualizar usa 'idEstudiante' (camelCase) o 'id_estudiante' (snake_case)
-      'idEstudiante': idEstudiante, // O 'id_estudiante': idEstudiante,
+      // 'id_estudiante': idEstudiante, // No incluyas idEstudiante para operaciones POST (crear)
+      // Si tu API espera el ID para las operaciones PUT (actualizar), puedes incluirlo condicionalmente:
+      if (idEstudiante != null) 'id_estudiante': idEstudiante,
+      
       'nombres': nombres,
       'apellidos': apellidos,
       'cedula': cedula,
-      'fechaNacimiento': fechaNacimiento?.toIso8601String(),
+      // Asegúrate de que la API espere 'fecha_nacimiento' en este formato
+      'fecha_nacimiento': fechaNacimiento?.toIso8601String().split('T')[0], // Formato 'YYYY-MM-DD'
       'correo': correo,
       'telefono': telefono,
       'direccion': direccion,
       'observaciones': observaciones,
       'seguimiento': seguimiento,
-      // === ELIMINAR si ya no envías discapacidadId ===
-      // 'discapacidadId': discapacidadId,
-      // Si la API espera el nombre de la discapacidad al enviar:
-      'discapacidad': discapacidad,
-      'fechaRegistro': fechaRegistro?.toIso8601String(),
-      'fechaActualizacion': fechaActualizacion?.toIso8601String(),
+      // 'discapacidad': discapacidad, // No envíes el NOMBRE de la discapacidad en el payload de guardado
+      'discapacidad_id': idDiscapacidad, // ¡ENVÍA EL ID!
+      
+      // 'fecha_registro': fechaRegistro?.toIso8601String(), // La API suele manejar esto automáticamente en POST
+      // 'fecha_actualizacion': fechaActualizacion?.toIso8601String(), // La API suele manejar esto automáticamente en POST
     };
   }
 
-  // Implementación de la interfaz TableData
   @override
-  int get id => idEstudiante;
+  int get id => idEstudiante ?? 0; // Si idEstudiante es nulo, devuelve 0 o un valor por defecto.
 
   @override
-  List<DataCell> getCells(BuildContext context, List<DataColumn2> currentColumns) {
+  List<DataCell> getCells(
+    BuildContext context,
+    List<DataColumn2> currentColumns,
+    Map<String, Function(dynamic item)> actionCallbacks,
+  ) {
     List<DataCell> cells = [];
 
     for (var column in currentColumns) {
       final columnLabel = (column.label as Text).data;
 
-      if (columnLabel == 'ID') {
-        cells.add(DataCell(Text(idEstudiante.toString())));
-      } else if (columnLabel == 'Nombres') {
-        cells.add(DataCell(Text(nombres)));
-      } else if (columnLabel == 'Apellidos') {
-        cells.add(DataCell(Text(apellidos)));
-      } else if (columnLabel == 'Cédula') {
-        cells.add(DataCell(Text(cedula)));
+      switch (columnLabel) {
+        case 'ID':
+          cells.add(DataCell(Text(idEstudiante.toString())));
+          break;
+        case 'Nombres':
+          cells.add(DataCell(Text(nombres)));
+          break;
+        case 'Apellidos':
+          cells.add(DataCell(Text(apellidos)));
+          break;
+        case 'Cédula':
+          cells.add(DataCell(Text(cedula)));
+          break;
+        case 'Discapacidad': // Asegúrate de que tu CustomDataTable tiene esta columna
+          cells.add(DataCell(Text(discapacidad ?? 'N/A'))); // Muestra el nombre
+          break;
+        case 'Info':
+          cells.add(
+            DataCell(
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.info_outline, size: 25, color: AppColors.primary),
+                  tooltip: 'Ver información del estudiante',
+                  onPressed: () {
+                    actionCallbacks['info']?.call(this);
+                  },
+                ),
+              ),
+            ),
+          );
+          break;
+        case 'Acciones':
+          cells.add(
+            DataCell(
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      icon: const Icon(Icons.edit, size: 25, color: AppColors.primary),
+                      tooltip: 'Editar estudiante',
+                      onPressed: () {
+                        actionCallbacks['edit']?.call(this);
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      icon: const Icon(Icons.delete, size: 25, color: AppColors.error),
+                      tooltip: 'Eliminar estudiante',
+                      onPressed: () {
+                        actionCallbacks['delete']?.call(this);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+          break;
+        default:
+          cells.add(const DataCell(Text('N/A')));
       }
     }
     return cells;

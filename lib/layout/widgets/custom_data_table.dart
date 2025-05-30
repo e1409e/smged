@@ -1,21 +1,26 @@
 // lib/layout/widgets/custom_data_table.dart
 import 'package:flutter/material.dart';
 import 'package:data_table_2/data_table_2.dart';
-import 'package:smged/layout/widgets/custom_colors.dart'; // Asegúrate de que esta ruta sea correcta
 
 // Define una interfaz o contrato para los datos que se mostrarán en la tabla.
 // Tu modelo 'Estudiante' debe implementar esta interfaz.
 abstract class TableData {
   int get id; // Necesario para identificar filas únicas
-  // getCells ahora acepta la lista de columnas como parámetro
-  List<DataCell> getCells(BuildContext context, List<DataColumn2> currentColumns);
+  // getCells ahora acepta el callback para acciones con un tipo 'dynamic'
+  // El casting a 'Estudiante' se hará en los métodos de _EstudiantesScreenState
+  List<DataCell> getCells(
+    BuildContext context,
+    List<DataColumn2> currentColumns,
+    Map<String, Function(dynamic item)> actionCallbacks, // Cambiado de nuevo a dynamic
+  );
 }
 
 class CustomDataTable<T extends TableData> extends StatelessWidget {
   final List<T> data;
-  final List<DataColumn2> columns; // Estas son las columnas que se están mostrando
+  final List<DataColumn2> columns;
   final double? minWidth;
-  final void Function(T item) onInfoPressed;
+  // El tipo de la función en el mapa sigue siendo Function(T item)
+  final Map<String, Function(T item)> actionCallbacks;
   final int? sortColumnIndex;
   final bool sortAscending;
 
@@ -23,7 +28,7 @@ class CustomDataTable<T extends TableData> extends StatelessWidget {
     super.key,
     required this.data,
     required this.columns,
-    required this.onInfoPressed,
+    required this.actionCallbacks,
     this.minWidth,
     this.sortColumnIndex,
     this.sortAscending = true,
@@ -44,29 +49,17 @@ class CustomDataTable<T extends TableData> extends StatelessWidget {
       minWidth: minWidth,
       columns: columns,
       rows: data.map((item) {
-        // Obtiene las celdas de datos usando el nuevo método getCells
-        List<DataCell> cells = item.getCells(context, columns);
+        // Al pasar los actionCallbacks, necesitamos asegurar que el 'item' que recibe el callback
+        // dentro de getCells sea el tipo T correcto.
+        // Hacemos un mapeo para ajustar el tipo de entrada de Function(T item) a Function(dynamic item).
+        // El 'item' que se pasa al callback dentro de DataCell será el 'this' (que es un Estudiante).
+        final Map<String, Function(dynamic item)> dynamicActionCallbacks =
+            actionCallbacks.map((key, value) {
+          return MapEntry(key, (dynamic i) => value(i as T));
+        });
 
-        // AÑADE la celda de acción aquí en CustomDataTable.
-        // Solo la añade si la columna 'Info' existe en la lista de columnas actuales
-        if (columns.any((col) => (col.label as Text).data == 'Info')) {
-          cells.add(
-            DataCell(
-              Align(
-                alignment: Alignment.centerLeft, // Alinea el contenido de la celda a la izquierda
-                child: IconButton(
-                  padding: EdgeInsets.zero, // Elimina el padding por defecto del botón
-                  constraints: const BoxConstraints(), // Elimina las restricciones de tamaño mínimo del botón
-                  icon: const Icon(Icons.info_outline, size: 20, color: AppColors.primary),
-                  tooltip: 'Ver información del estudiante',
-                  onPressed: () {
-                    onInfoPressed(item);
-                  },
-                ),
-              ),
-            ),
-          );
-        }
+        List<DataCell> cells = item.getCells(context, columns, dynamicActionCallbacks);
+
 
         return DataRow(
           key: ValueKey(item.id),

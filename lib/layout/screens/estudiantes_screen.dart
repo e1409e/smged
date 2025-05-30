@@ -1,372 +1,488 @@
-// lib/layout/screens/estudiantes_screen.dart
+// lib/layout/screens/forms/estudiante_form_screen.dart
 import 'package:flutter/material.dart';
-import 'package:data_table_2/data_table_2.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter/foundation.dart'; // ¡Importa esto para defaultTargetPlatform!
+import 'package:collection/collection.dart'; // Necesario para firstWhereOrNull
 
 import 'package:smged/api/models/estudiante.dart';
+import 'package:smged/api/models/discapacidad.dart'; // Asegúrate de importar tu modelo Discapacidad
 import 'package:smged/api/services/estudiantes_service.dart';
-import 'package:smged/layout/widgets/custom_data_table.dart';
-import 'package:smged/layout/widgets/custom_colors.dart';
-import 'package:smged/layout/widgets/search_bar_widget.dart';
+import 'package:smged/api/services/discapacidades_service.dart';
+import 'package:smged/layout/widgets/custom_colors.dart'; // Asumo que lo usas para colores
 
-class EstudiantesScreen extends StatefulWidget {
-  const EstudiantesScreen({super.key});
+class EstudianteFormScreen extends StatefulWidget {
+  final Estudiante? estudianteToEdit;
+
+  const EstudianteFormScreen({super.key, this.estudianteToEdit});
 
   @override
-  State<EstudiantesScreen> createState() => _EstudiantesScreenState();
+  State<EstudianteFormScreen> createState() => _EstudianteFormScreenState();
 }
 
-class _EstudiantesScreenState extends State<EstudiantesScreen> {
+class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final TextEditingController _nombresController = TextEditingController();
+  final TextEditingController _apellidosController = TextEditingController();
+  final TextEditingController _cedulaController = TextEditingController();
+  final TextEditingController _correoController = TextEditingController();
+  final TextEditingController _telefonoController = TextEditingController();
+  final TextEditingController _direccionController = TextEditingController();
+  final TextEditingController _observacionesController = TextEditingController();
+  final TextEditingController _seguimientoController = TextEditingController();
+
+  DateTime? _fechaNacimiento;
+  List<Discapacidad> _discapacidades = [];
+  Discapacidad? _selectedDiscapacidad;
+
+  final DiscapacidadesService _discapacidadesService = DiscapacidadesService();
+  bool _isLoadingDiscapacidades = true;
+  String? _discapacidadesError;
+
   final EstudiantesService _estudiantesService = EstudiantesService();
-  List<Estudiante> _estudiantes = [];
-  List<Estudiante> _filteredEstudiantes = [];
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  int? _sortColumnIndex;
-  bool _sortAscending = true;
-
-  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _fetchEstudiantes();
-    _searchController.addListener(_filterEstudiantes);
+    _fetchDiscapacidades(); // Siempre carga las discapacidades
+
+    // 1. Inicializar los controladores con los datos del estudiante si está en modo edición
+    if (widget.estudianteToEdit != null) {
+      final estudiante = widget.estudianteToEdit!;
+      _nombresController.text = estudiante.nombres;
+      _apellidosController.text = estudiante.apellidos;
+      _cedulaController.text = estudiante.cedula;
+      _correoController.text = estudiante.correo ?? '';
+      _telefonoController.text = estudiante.telefono ?? '';
+      _direccionController.text = estudiante.direccion ?? '';
+      _observacionesController.text = estudiante.observaciones ?? '';
+      _seguimientoController.text = estudiante.seguimiento ?? '';
+      _fechaNacimiento = estudiante.fechaNacimiento;
+
+      // Importante: No se puede seleccionar _selectedDiscapacidad aquí directamente,
+      // porque _discapacidades aún no se han cargado.
+      // Se hará después de _fetchDiscapacidades en _setInitialDiscapacidadSelection.
+    }
   }
 
   @override
   void dispose() {
-    _searchController.removeListener(_filterEstudiantes);
-    _searchController.dispose();
+    _nombresController.dispose();
+    _apellidosController.dispose();
+    _cedulaController.dispose();
+    _correoController.dispose();
+    _telefonoController.dispose();
+    _direccionController.dispose();
+    _observacionesController.dispose();
+    _seguimientoController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchEstudiantes() async {
+  // Método para seleccionar la discapacidad inicial
+  void _setInitialDiscapacidadSelection() {
+    // Solo intenta establecer la selección si estamos editando y tenemos un ID de discapacidad
+    if (widget.estudianteToEdit != null && widget.estudianteToEdit!.idDiscapacidad != null) {
+      final int idDiscapacidadToMatch = widget.estudianteToEdit!.idDiscapacidad!;
+
+      // Busca la discapacidad en la lista cargada por su ID
+      final Discapacidad? initialDiscapacidad = _discapacidades.firstWhereOrNull(
+        (d) => d.idDiscapacidad == idDiscapacidadToMatch,
+      );
+
+      if (initialDiscapacidad != null) {
+        // Usa setState para actualizar el estado del DropdownButtonFormField
+        setState(() {
+          
+          _selectedDiscapacidad = initialDiscapacidad;
+        });
+        debugPrint('Discapacidad inicial seleccionada: ${_selectedDiscapacidad!.nombre}');
+      } else {
+        debugPrint('No se encontró la discapacidad con ID ${idDiscapacidadToMatch} en la lista cargada.');
+        // Opcional: Mostrar un mensaje al usuario si la discapacidad no se encuentra
+      }
+    }
+  }
+
+  // Función asíncrona para obtener las discapacidades de la API
+  Future<void> _fetchDiscapacidades() async {
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _isLoadingDiscapacidades = true;
+      _discapacidadesError = null;
     });
     try {
-      final fetchedEstudiantes = await _estudiantesService.obtenerTodosLosEstudiantes();
+      final fetchedDiscapacidades = await _discapacidadesService.obtenerDiscapacidades();
       setState(() {
-        _estudiantes = fetchedEstudiantes;
-        _filteredEstudiantes = fetchedEstudiantes;
-        _sortColumnIndex = null;
-        _sortAscending = true;
+        _discapacidades = fetchedDiscapacidades;
+        // 2. Llama a este método DESPUÉS de que _discapacidades esté poblada
+        _setInitialDiscapacidadSelection();
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Error al cargar estudiantes: ${e.toString().replaceFirst('Exception: ', '')}';
+        _discapacidadesError = 'Error al cargar discapacidades: ${e.toString().replaceFirst('Exception: ', '')}';
       });
     } finally {
       setState(() {
-        _isLoading = false;
+        _isLoadingDiscapacidades = false;
       });
     }
   }
 
-  void _onSort(int columnIndex, bool ascending) {
-    // Es importante que la lógica de ordenación coincida con el orden de las columnas cuando
-    // se usan las columnas reducidas. Para simplificar, ordenaremos la lista completa
-    // y luego aplicaremos el filtro, y la tabla solo mostrará las columnas relevantes.
-
-    // Primero, definimos las columnas "base" para los índices de ordenación
-    // sin importar si se muestran o no.
-    final List<DataColumn2> baseColumns = [
-      DataColumn2(label: const Text('ID')),
-      DataColumn2(label: const Text('Nombres')),
-      DataColumn2(label: const Text('Apellidos')),
-      DataColumn2(label: const Text('Cédula')),
-      DataColumn2(label: const Text('Info')),
-    ];
-
-    // Ahora, mapeamos el `columnIndex` recibido a la columna real que se está ordenando.
-    // Esto es crucial porque si solo mostramos 3 columnas, el índice 1 (Nombres)
-    // sigue siendo el índice 1 para la ordenación de la lista original.
-    String sortKey = '';
-    if (columnIndex >= 0 && columnIndex < baseColumns.length) {
-      sortKey = (baseColumns[columnIndex].label as Text).data!;
-    }
-
-    if (sortKey == 'ID') {
-      _estudiantes.sort((a, b) => ascending
-          ? a.idEstudiante.compareTo(b.idEstudiante)
-          : b.idEstudiante.compareTo(a.idEstudiante));
-    } else if (sortKey == 'Nombres') {
-      _estudiantes.sort((a, b) => ascending
-          ? a.nombres.compareTo(b.nombres)
-          : b.nombres.compareTo(a.nombres));
-    } else if (sortKey == 'Apellidos') {
-      _estudiantes.sort((a, b) => ascending
-          ? a.apellidos.compareTo(b.apellidos)
-          : b.apellidos.compareTo(a.apellidos));
-    } else if (sortKey == 'Cédula') {
-      _estudiantes.sort((a, b) => ascending
-          ? a.cedula.compareTo(b.cedula)
-          : b.cedula.compareTo(a.cedula));
-    }
-
-    _filterEstudiantes(); // Vuelve a filtrar para aplicar el nuevo orden
-
-    setState(() {
-      _sortColumnIndex = columnIndex;
-      _sortAscending = ascending;
-    });
-  }
-
-
-  void _filterEstudiantes() {
-    final query = _searchController.text.toLowerCase();
-    setState(() {
-      if (query.isEmpty) {
-        _filteredEstudiantes = List.from(_estudiantes);
-      } else {
-        _filteredEstudiantes = _estudiantes.where((estudiante) {
-          final nombreCompleto = '${estudiante.nombres} ${estudiante.apellidos}'.toLowerCase();
-          final cedula = estudiante.cedula.toLowerCase();
-          return nombreCompleto.contains(query) || cedula.contains(query);
-        }).toList();
-      }
-    });
-  }
-
-  void showEstudianteInfoModal(Estudiante estudiante) {
-    final DateFormat dateFormatter = DateFormat('dd/MM/yyyy');
-
-    showDialog(
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            'Información de ${estudiante.nombres} ${estudiante.apellidos}',
-          ),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                _buildInfoRow('ID:', estudiante.idEstudiante.toString()),
-                _buildInfoRow('Nombres:', estudiante.nombres),
-                _buildInfoRow('Apellidos:', estudiante.apellidos),
-                _buildInfoRow('Cédula:', estudiante.cedula),
-                _buildInfoRow('Correo:', estudiante.correo ?? 'N/A'),
-                _buildInfoRow('Teléfono:', estudiante.telefono ?? 'N/A'),
-                //_buildInfoRow('Dirección:', estudiante.direccion ?? 'N/A'),
-                _buildInfoRow(
-                  'Fecha Nacimiento:',
-                  estudiante.fechaNacimiento != null
-                      ? dateFormatter.format(estudiante.fechaNacimiento!)
-                      : 'N/A',
-                ),
-                _buildInfoRow(
-                  'Observaciones:',
-                  estudiante.observaciones ?? 'N/A',
-                ),
-                _buildInfoRow('Seguimiento:', estudiante.seguimiento ?? 'N/A'),
-                _buildInfoRow(
-                  'Discapacidad:',
-                  estudiante.discapacidad ?? 'Ninguna',
-                ),
-                _buildInfoRow(
-                  'Fecha Registro:',
-                  estudiante.fechaRegistro != null
-                      ? dateFormatter.format(estudiante.fechaRegistro!)
-                      : 'N/A',
-                ),
-              ],
+      initialDate: _fechaNacimiento ?? DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      locale: const Locale('es', 'ES'),
+      helpText: 'Selecciona la fecha de nacimiento',
+      cancelText: 'Cancelar',
+      confirmText: 'Aceptar',
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary, // Color principal del calendario
+              onPrimary: AppColors.textTitle, // Color del texto en el encabezado
+              onSurface: AppColors.textPrimary, // Color del texto del calendario
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary, // Color de los botones del calendario
+              ),
             ),
           ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cerrar'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
+          child: child!,
         );
       },
     );
+    if (picked != null && picked != _fechaNacimiento) {
+      setState(() {
+        _fechaNacimiento = picked;
+      });
+    }
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 130,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
+  Future<void> _saveEstudiante() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Guardando estudiante...'), duration: Duration(seconds: 1)),
     );
+
+    try {
+      final String nombres = _nombresController.text;
+      final String apellidos = _apellidosController.text;
+      final String cedula = _cedulaController.text;
+      final String correo = _correoController.text;
+      final String telefono = _telefonoController.text;
+      final String direccion = _direccionController.text;
+      final String observaciones = _observacionesController.text;
+      final String seguimiento = _seguimientoController.text;
+
+      final int? idDiscapacidad = _selectedDiscapacidad?.idDiscapacidad;
+
+      if (idDiscapacidad == null) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor, selecciona una discapacidad.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      final bool isEditing = widget.estudianteToEdit != null;
+      final int? currentEstudianteId = widget.estudianteToEdit?.idEstudiante;
+
+      final Estudiante estudiantePayload = Estudiante(
+        idEstudiante: currentEstudianteId,
+        nombres: nombres,
+        apellidos: apellidos,
+        cedula: cedula,
+        correo: correo,
+        telefono: telefono,
+        direccion: direccion,
+        fechaNacimiento: _fechaNacimiento,
+        idDiscapacidad: idDiscapacidad,
+        observaciones: observaciones,
+        seguimiento: seguimiento,
+        discapacidad: _selectedDiscapacidad?.nombre, // Pasa el nombre de la discapacidad si está seleccionada
+        // No asignes fechaRegistro, fechaActualizacion aquí si solo los lees de la API
+      );
+
+      Estudiante? savedEstudiante;
+
+      if (isEditing) {
+        savedEstudiante = await _estudiantesService.actualizarEstudiante(estudiantePayload);
+      } else {
+        savedEstudiante = await _estudiantesService.crearEstudiante(estudiantePayload);
+      }
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Estudiante "${savedEstudiante?.nombres ?? 'Desconocido'}" ${isEditing ? 'actualizado' : 'guardado'} exitosamente.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al ${widget.estudianteToEdit != null ? 'actualizar' : 'guardar'} estudiante: ${e.toString().replaceFirst('Exception: ', '')}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      debugPrint('Error al guardar/actualizar estudiante: $e');
+    }
+  }
+
+  void _submitForm() {
+    _saveEstudiante();
   }
 
   @override
   Widget build(BuildContext context) {
-    List<DataColumn2> estudianteColumns;
-
-    // Lógica condicional para las columnas según la plataforma
-    if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-      // Columnas para Android y iOS
-      estudianteColumns = [
-        DataColumn2(
-          label: const Text('ID'),
-          fixedWidth: 60,
-          onSort: (columnIndex, ascending) => _onSort(columnIndex, ascending),
-        ),
-        DataColumn2(
-          label: const Text('Nombres'),
-          //size: ColumnSize.S,
-          fixedWidth: 200,
-          onSort: (columnIndex, ascending) => _onSort(columnIndex, ascending),
-        ),
-        DataColumn2(
-          label: const Text('Info'), // Columna de acciones
-          //size: ColumnSize.S,
-          fixedWidth: 100,
-        ),
-      ];
-      // Ajustar el sortColumnIndex para la ordenación si las columnas son diferentes
-      // Si la columna "Nombres" en el conjunto reducido es la 1, y en el completo también,
-      // la lógica de _onSort() ya debería manejarlo si está basada en el texto del label.
-      // Si no, podríamos necesitar mapear los índices.
-    } else {
-      // Columnas para otras plataformas (Web, Desktop)
-      estudianteColumns = [
-        DataColumn2(
-          label: const Text('ID'),
-          fixedWidth: 80,
-          onSort: (columnIndex, ascending) => _onSort(columnIndex, ascending),
-        ),
-        DataColumn2(
-          label: const Text('Nombres'),
-          size: ColumnSize.L,
-          onSort: (columnIndex, ascending) => _onSort(columnIndex, ascending),
-        ),
-        DataColumn2(
-          label: const Text('Apellidos'),
-          size: ColumnSize.L,
-          onSort: (columnIndex, ascending) => _onSort(columnIndex, ascending),
-        ),
-        DataColumn2(
-          label: const Text('Cédula'),
-          size: ColumnSize.M,
-          onSort: (columnIndex, ascending) => _onSort(columnIndex, ascending),
-        ),
-        DataColumn2(
-          label: const Text('Info'),
-          fixedWidth: 80,
-        ),
-      ];
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gestión de Estudiantes'),
+        title: Text(widget.estudianteToEdit == null ? 'Registrar Estudiante' : 'Editar Estudiante'),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.textTitle,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchEstudiantes,
-            tooltip: 'Recargar estudiantes',
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              debugPrint('Navegar a pantalla para añadir estudiante');
-            },
-            tooltip: 'Añadir nuevo estudiante',
-          ),
-        ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: AppColors.error, fontSize: 18),
-                      textAlign: TextAlign.center,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              // Título
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20.0),
+                child: Text(
+                  widget.estudianteToEdit == null ? 'Ingresa los datos del nuevo estudiante' : 'Edita los datos del estudiante',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+
+              // Campo Nombres
+              TextFormField(
+                controller: _nombresController,
+                decoration: const InputDecoration(
+                  labelText: 'Nombres',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor ingresa los nombres';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16.0),
+
+              // Campo Apellidos
+              TextFormField(
+                controller: _apellidosController,
+                decoration: const InputDecoration(
+                  labelText: 'Apellidos',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor ingresa los apellidos';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16.0),
+
+              // Campo Cédula
+              TextFormField(
+                controller: _cedulaController,
+                decoration: const InputDecoration(
+                  labelText: 'Cédula',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.credit_card),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor ingresa la cédula';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16.0),
+
+              // Campo Fecha de Nacimiento
+              InkWell(
+                onTap: () => _selectDate(context),
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Fecha de Nacimiento',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.calendar_today),
+                    suffixIcon: _fechaNacimiento != null
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              setState(() {
+                                _fechaNacimiento = null;
+                              });
+                            },
+                          )
+                        : null,
+                  ),
+                  child: Text(
+                    _fechaNacimiento == null
+                        ? 'Selecciona una fecha'
+                        : '${_fechaNacimiento!.day}/${_fechaNacimiento!.month}/${_fechaNacimiento!.year}',
+                    style: TextStyle(
+                      color: _fechaNacimiento == null ? Colors.grey[700] : Colors.black,
+                      fontSize: 16.0,
                     ),
                   ),
-                )
-              : Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SearchBarWidget(
-                        controller: _searchController,
-                        hintText: 'Buscar estudiante por nombre o cédula...',
-                        onChanged: (query) => _filterEstudiantes(),
-                      ),
-                      const SizedBox(height: 16.0),
-                      Expanded(
-                        child: Card(
-                          elevation: 8.0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.0),
+                ),
+              ),
+              const SizedBox(height: 16.0),
+
+              // Campo Correo
+              TextFormField(
+                controller: _correoController,
+                decoration: const InputDecoration(
+                  labelText: 'Correo',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.email),
+                ),
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value != null && value.isNotEmpty && !value.contains('@')) {
+                    return 'Introduce un correo válido';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16.0),
+
+              // Campo Teléfono
+              TextFormField(
+                controller: _telefonoController,
+                decoration: const InputDecoration(
+                  labelText: 'Teléfono',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.phone),
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16.0),
+
+              // Campo Dirección
+              TextFormField(
+                controller: _direccionController,
+                decoration: const InputDecoration(
+                  labelText: 'Dirección',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.home),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16.0),
+
+              // Campo Observaciones
+              TextFormField(
+                controller: _observacionesController,
+                decoration: const InputDecoration(
+                  labelText: 'Observaciones',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.notes),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16.0),
+
+              // Campo Seguimiento
+              TextFormField(
+                controller: _seguimientoController,
+                decoration: const InputDecoration(
+                  labelText: 'Seguimiento',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.track_changes),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16.0),
+
+              // Dropdown para Discapacidad
+              _isLoadingDiscapacidades
+                  ? const Center(child: CircularProgressIndicator())
+                  : _discapacidadesError != null
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Text(
+                            _discapacidadesError!,
+                            style: const TextStyle(color: Colors.red),
+                            textAlign: TextAlign.center,
                           ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: 8.0,
-                                  top: 8.0,
-                                  left: 16.0,
-                                  right: 16.0,
-                                ),
-                                child: Text(
-                                  'LISTA DE ESTUDIANTES',
-                                  textAlign: TextAlign.left,
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                              const Divider(),
-                              _filteredEstudiantes.isEmpty
-                                  ? const Expanded(
-                                      child: Center(
-                                        child: Text(
-                                          'No hay estudiantes registrados o no se encontraron resultados.',
-                                          style: TextStyle(fontSize: 16, color: Colors.grey),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                    )
-                                  : Expanded(
-                                      child: CustomDataTable<Estudiante>(
-                                        data: _filteredEstudiantes,
-                                        columns: estudianteColumns,
-                                        minWidth: 700, // minWidth puede que necesite ajuste para pantallas pequeñas
-                                        onInfoPressed: (item) {
-                                          showEstudianteInfoModal(item);
-                                        },
-                                        sortColumnIndex: _sortColumnIndex,
-                                        sortAscending: _sortAscending,
-                                      ),
-                                    ),
-                            ],
+                        )
+                      : DropdownButtonFormField<Discapacidad>(
+                          value: _selectedDiscapacidad,
+                          decoration: const InputDecoration(
+                            labelText: 'Discapacidad',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.wheelchair_pickup),
                           ),
+                          hint: const Text('Selecciona una discapacidad'),
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Por favor selecciona una discapacidad';
+                            }
+                            return null;
+                          },
+                          items: _discapacidades.map((Discapacidad discapacidad) {
+                            return DropdownMenuItem<Discapacidad>(
+                              value: discapacidad,
+                              child: Text(discapacidad.nombre),
+                            );
+                          }).toList(),
+                          onChanged: (Discapacidad? newValue) {
+                            setState(() {
+                              _selectedDiscapacidad = newValue;
+                            });
+                          },
+                          // Esto es clave: si `_selectedDiscapacidad` no es uno de los objetos en `_discapacidades`,
+                          // el `DropdownButtonFormField` puede no mostrar nada.
+                          // Asegurarse que el objeto seleccionado es una instancia de la lista.
                         ),
-                      ),
-                    ],
+              const SizedBox(height: 20.0),
+
+              // Botón de Guardar/Actualizar
+              ElevatedButton.icon(
+                onPressed: _submitForm,
+                icon: Icon(widget.estudianteToEdit == null ? Icons.save : Icons.update),
+                label: Text(widget.estudianteToEdit == null ? 'Guardar Estudiante' : 'Actualizar Estudiante'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.textTitle,
+                  padding: const EdgeInsets.symmetric(vertical: 15.0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0),
                   ),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

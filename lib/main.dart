@@ -1,9 +1,7 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
-import 'package:smged/layout/screens/login_screen.dart';
-import 'package:smged/layout/screens/home_screen.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
-import 'package:smged/layout/screens/estudiantes_screen.dart';
+import 'package:smged/routes.dart'; // Asegúrate de que esta línea exista y la ruta sea correcta
 
 void main() {
   runApp(const MyApp());
@@ -29,10 +27,8 @@ class _MyAppState extends State<MyApp> {
     setState(() {
       _isLoggedIn = false;
     });
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => LoginScreen(onLoginSuccess: _handleLoginSuccess)),
-      (Route<dynamic> route) => false,
-    );
+    // Usamos pushReplacementNamed para ir a la ruta inicial manejada por routes.dart
+    Navigator.of(context).pushReplacementNamed(AppRoutes.initialRoute);
   }
 
   @override
@@ -41,9 +37,8 @@ class _MyAppState extends State<MyApp> {
       title: 'SMGED App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary).copyWith( 
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary).copyWith(
           primary: AppColors.primary,
-          
         ),
         useMaterial3: true,
         inputDecorationTheme: InputDecorationTheme(
@@ -58,20 +53,20 @@ class _MyAppState extends State<MyApp> {
             color: Colors.grey[600],
           ),
           floatingLabelStyle: TextStyle(
-            color: AppColors.primary, 
+            color: AppColors.primary,
           ),
         ),
         textSelectionTheme: TextSelectionThemeData(
-          cursorColor: AppColors.primary, 
+          cursorColor: AppColors.primary,
         ),
       ),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => _isLoggedIn
-            ? HomeScreen(onLogout: () => _handleLogout(context))
-            : LoginScreen(onLoginSuccess: _handleLoginSuccess),
-        '/estudiantes': (context) => const EstudiantesScreen(),
-      },
+      initialRoute: AppRoutes.initialRoute,
+      // ¡Llama a la función directamente, sin prefijo de clase!
+      routes: getApplicationRoutes(
+        _isLoggedIn,
+        _handleLoginSuccess,
+        _handleLogout,
+      ),
     );
   }
 }
