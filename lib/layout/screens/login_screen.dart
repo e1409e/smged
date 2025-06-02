@@ -1,8 +1,11 @@
+// lib/layout/screens/login_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint; // Importa debugPrint
 import 'package:smged/api/models/login_request.dart';
 import 'package:smged/api/services/auth_service.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/layout/widgets/custom_TextStyles.dart';
+// No necesitas importar HomeScreen aquí, la navegación la maneja routes.dart
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -22,10 +25,12 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _errorMessage;
 
   Future<void> _login() async {
+    debugPrint('[_LoginScreenState] Iniciando función _login...');
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
+    debugPrint('[_LoginScreenState] Estado de carga y error reseteados.');
 
     final cedulaUsuario = _cedulaUsuarioController.text;
     final password = _passwordController.text;
@@ -35,23 +40,30 @@ class _LoginScreenState extends State<LoginScreen> {
         _errorMessage = 'Por favor, ingresa cédula y contraseña.';
         _isLoading = false;
       });
+      debugPrint('[_LoginScreenState] Campos de login vacíos. Error: $_errorMessage');
       return;
     }
 
+    debugPrint('[_LoginScreenState] Campos de login no vacíos. Cédula: $cedulaUsuario');
+
     try {
+      debugPrint('[_LoginScreenState] Creando LoginRequest y llamando a AuthService.login...');
       final request = LoginRequest(
         cedula_usuario: cedulaUsuario,
         password: password,
       );
       final response = await _authService.login(request);
+      debugPrint('[_LoginScreenState] AuthService.login completado. Respuesta success: ${response.success}');
 
       if (response.success) {
+        debugPrint('[_LoginScreenState] Login exitoso. response.success es TRUE. Llamando a widget.onLoginSuccess().');
         widget.onLoginSuccess();
+        debugPrint('[_LoginScreenState] widget.onLoginSuccess() llamado. Esperando reconstrucción de MaterialApp...');
       } else {
         setState(() {
-          _errorMessage =
-              response.message ?? 'Credenciales inválidas o error desconocido.';
+          _errorMessage = response.message ?? 'Credenciales inválidas o error desconocido.';
         });
+        debugPrint('[_LoginScreenState] Login fallido. Mensaje: $_errorMessage');
       }
     } catch (e) {
       setState(() {
@@ -59,15 +71,18 @@ class _LoginScreenState extends State<LoginScreen> {
             ? e.toString().replaceFirst('Exception: ', '')
             : 'Error de conexión o inesperado.';
       });
+      debugPrint('[_LoginScreenState] Excepción capturada durante el login: $e');
     } finally {
       setState(() {
         _isLoading = false;
       });
+      debugPrint('[_LoginScreenState] Finalizado el bloque try-catch-finally de _login. _isLoading es false.');
     }
   }
 
   @override
   void dispose() {
+    debugPrint('[_LoginScreenState] dispose() llamado. Limpiando controladores.');
     _cedulaUsuarioController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -75,14 +90,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Obtenemos el ancho de la pantalla
+    debugPrint('[_LoginScreenState] build() llamado.');
     final double screenWidth = MediaQuery.of(context).size.width;
-    // Definimos un ancho máximo para la Card en pantallas grandes.
-    // Esto asegura que la Card no se estire demasiado.
-    final double cardWidth = screenWidth > 600
-        ? 400
-        : screenWidth *
-              0.9; // 400px en pantallas grandes, 90% del ancho en pequeñas
+    final double cardWidth = screenWidth > 600 ? 400 : screenWidth * 0.9;
 
     return Scaffold(
       appBar: AppBar(
@@ -97,21 +107,16 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: SizedBox(
-            // Usamos SizedBox para limitar el ancho de la Card
             width: cardWidth,
             child: Card(
-              // <--- Aquí usamos Card
-              elevation: 8.0, // Elevación para el efecto de sombra
+              elevation: 8.0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.0), // Bordes redondeados
+                borderRadius: BorderRadius.circular(12.0),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(
-                  24.0,
-                ), // Padding dentro de la Card
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
-                  mainAxisSize: MainAxisSize
-                      .min, // La columna ocupará el espacio mínimo necesario
+                  mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -119,13 +124,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       'Bienvenido',
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(
-                            color: AppColors.primary, // Color del título
+                            color: AppColors.primary,
                             fontWeight: FontWeight.bold,
                           ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 48.0),
-
                     TextField(
                       controller: _cedulaUsuarioController,
                       decoration: InputDecoration(
@@ -133,7 +137,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         hintText: 'Ingrese su número de cédula',
                         border: const OutlineInputBorder(),
                         prefixIcon: const Icon(Icons.person),
-
                         focusedBorder: OutlineInputBorder(
                           borderSide: BorderSide(
                             color: AppColors.primary,
@@ -149,14 +152,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       cursorColor: AppColors.primary,
                     ),
                     const SizedBox(height: 16.0),
-
                     TextField(
                       controller: _passwordController,
                       decoration: InputDecoration(
                         labelText: 'Contraseña',
                         hintText: 'Ingrese su contraseña',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.lock),
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock),
                         focusedBorder: OutlineInputBorder(
                           borderSide: BorderSide(
                             color: AppColors.primary,
@@ -166,9 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         labelStyle: TextStyles.label,
                         floatingLabelStyle: TextStyles.labelfocus,
-                        
                       ),
-
                       obscureText: true,
                       keyboardType: TextInputType.visiblePassword,
                       textInputAction: TextInputAction.done,
@@ -176,7 +176,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       onSubmitted: (_) => _login(),
                     ),
                     const SizedBox(height: 24.0),
-
                     if (_errorMessage != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
@@ -189,16 +188,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           textAlign: TextAlign.center,
                         ),
                       ),
-
                     SizedBox(
                       height: 50,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          foregroundColor: Theme.of(
-                            context,
-                          ).colorScheme.onPrimary,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8.0),
                           ),

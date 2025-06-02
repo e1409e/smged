@@ -1,488 +1,429 @@
-// lib/layout/screens/forms/estudiante_form_screen.dart
+// lib/layout/screens/estudiantes_screen.dart
 import 'package:flutter/material.dart';
-import 'package:collection/collection.dart'; // Necesario para firstWhereOrNull
+import 'package:data_table_2/data_table_2.dart';
+import 'package:flutter/foundation.dart'; // Necesario para defaultTargetPlatform
+import 'package:collection/collection.dart'; // Importa para firstWhereOrNull
 
 import 'package:smged/api/models/estudiante.dart';
-import 'package:smged/api/models/discapacidad.dart'; // Asegúrate de importar tu modelo Discapacidad
 import 'package:smged/api/services/estudiantes_service.dart';
-import 'package:smged/api/services/discapacidades_service.dart';
-import 'package:smged/layout/widgets/custom_colors.dart'; // Asumo que lo usas para colores
+import 'package:smged/layout/widgets/custom_data_table.dart';
+import 'package:smged/layout/widgets/custom_colors.dart';
+import 'package:smged/layout/widgets/search_bar_widget.dart';
+import 'package:smged/layout/utils/estudiantes_utils.dart';
+import 'package:smged/layout/screens/forms/estudiante_form_screen.dart'; // ¡IMPORTANTE! Importa el formulario
 
-class EstudianteFormScreen extends StatefulWidget {
-  final Estudiante? estudianteToEdit;
-
-  const EstudianteFormScreen({super.key, this.estudianteToEdit});
+class EstudiantesScreen extends StatefulWidget {
+  const EstudiantesScreen({super.key});
 
   @override
-  State<EstudianteFormScreen> createState() => _EstudianteFormScreenState();
+  State<EstudiantesScreen> createState() => _EstudiantesScreenState();
 }
 
-class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
-  final _formKey = GlobalKey<FormState>();
-
-  final TextEditingController _nombresController = TextEditingController();
-  final TextEditingController _apellidosController = TextEditingController();
-  final TextEditingController _cedulaController = TextEditingController();
-  final TextEditingController _correoController = TextEditingController();
-  final TextEditingController _telefonoController = TextEditingController();
-  final TextEditingController _direccionController = TextEditingController();
-  final TextEditingController _observacionesController = TextEditingController();
-  final TextEditingController _seguimientoController = TextEditingController();
-
-  DateTime? _fechaNacimiento;
-  List<Discapacidad> _discapacidades = [];
-  Discapacidad? _selectedDiscapacidad;
-
-  final DiscapacidadesService _discapacidadesService = DiscapacidadesService();
-  bool _isLoadingDiscapacidades = true;
-  String? _discapacidadesError;
-
+class _EstudiantesScreenState extends State<EstudiantesScreen> {
   final EstudiantesService _estudiantesService = EstudiantesService();
+  List<Estudiante> _estudiantes = [];
+  List<Estudiante> _filteredEstudiantes = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  int? _sortColumnIndex;
+  bool _sortAscending = true;
+
+  final TextEditingController _searchController = TextEditingController();
+
+  bool _isActionMode = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchDiscapacidades(); // Siempre carga las discapacidades
-
-    // 1. Inicializar los controladores con los datos del estudiante si está en modo edición
-    if (widget.estudianteToEdit != null) {
-      final estudiante = widget.estudianteToEdit!;
-      _nombresController.text = estudiante.nombres;
-      _apellidosController.text = estudiante.apellidos;
-      _cedulaController.text = estudiante.cedula;
-      _correoController.text = estudiante.correo ?? '';
-      _telefonoController.text = estudiante.telefono ?? '';
-      _direccionController.text = estudiante.direccion ?? '';
-      _observacionesController.text = estudiante.observaciones ?? '';
-      _seguimientoController.text = estudiante.seguimiento ?? '';
-      _fechaNacimiento = estudiante.fechaNacimiento;
-
-      // Importante: No se puede seleccionar _selectedDiscapacidad aquí directamente,
-      // porque _discapacidades aún no se han cargado.
-      // Se hará después de _fetchDiscapacidades en _setInitialDiscapacidadSelection.
-    }
+    _fetchEstudiantes();
+    _searchController.addListener(_filterEstudiantes);
   }
 
   @override
   void dispose() {
-    _nombresController.dispose();
-    _apellidosController.dispose();
-    _cedulaController.dispose();
-    _correoController.dispose();
-    _telefonoController.dispose();
-    _direccionController.dispose();
-    _observacionesController.dispose();
-    _seguimientoController.dispose();
+    _searchController.removeListener(_filterEstudiantes);
+    _searchController.dispose();
     super.dispose();
   }
 
-  // Método para seleccionar la discapacidad inicial
-  void _setInitialDiscapacidadSelection() {
-    // Solo intenta establecer la selección si estamos editando y tenemos un ID de discapacidad
-    if (widget.estudianteToEdit != null && widget.estudianteToEdit!.idDiscapacidad != null) {
-      final int idDiscapacidadToMatch = widget.estudianteToEdit!.idDiscapacidad!;
-
-      // Busca la discapacidad en la lista cargada por su ID
-      final Discapacidad? initialDiscapacidad = _discapacidades.firstWhereOrNull(
-        (d) => d.idDiscapacidad == idDiscapacidadToMatch,
-      );
-
-      if (initialDiscapacidad != null) {
-        // Usa setState para actualizar el estado del DropdownButtonFormField
-        setState(() {
-          
-          _selectedDiscapacidad = initialDiscapacidad;
-        });
-        debugPrint('Discapacidad inicial seleccionada: ${_selectedDiscapacidad!.nombre}');
-      } else {
-        debugPrint('No se encontró la discapacidad con ID ${idDiscapacidadToMatch} en la lista cargada.');
-        // Opcional: Mostrar un mensaje al usuario si la discapacidad no se encuentra
-      }
-    }
-  }
-
-  // Función asíncrona para obtener las discapacidades de la API
-  Future<void> _fetchDiscapacidades() async {
+  Future<void> _fetchEstudiantes() async {
     setState(() {
-      _isLoadingDiscapacidades = true;
-      _discapacidadesError = null;
+      _isLoading = true;
+      _errorMessage = null;
     });
     try {
-      final fetchedDiscapacidades = await _discapacidadesService.obtenerDiscapacidades();
+      final fetchedEstudiantes = await _estudiantesService.obtenerTodosLosEstudiantes();
       setState(() {
-        _discapacidades = fetchedDiscapacidades;
-        // 2. Llama a este método DESPUÉS de que _discapacidades esté poblada
-        _setInitialDiscapacidadSelection();
+        _estudiantes = fetchedEstudiantes;
+        _filteredEstudiantes = fetchedEstudiantes;
+        _sortColumnIndex = null;
+        _sortAscending = true;
       });
     } catch (e) {
       setState(() {
-        _discapacidadesError = 'Error al cargar discapacidades: ${e.toString().replaceFirst('Exception: ', '')}';
+        _errorMessage = 'Error al cargar estudiantes: ${e.toString().replaceFirst('Exception: ', '')}';
       });
     } finally {
       setState(() {
-        _isLoadingDiscapacidades = false;
+        _isLoading = false;
       });
     }
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _fechaNacimiento ?? DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-      locale: const Locale('es', 'ES'),
-      helpText: 'Selecciona la fecha de nacimiento',
-      cancelText: 'Cancelar',
-      confirmText: 'Aceptar',
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primary, // Color principal del calendario
-              onPrimary: AppColors.textTitle, // Color del texto en el encabezado
-              onSurface: AppColors.textPrimary, // Color del texto del calendario
-            ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary, // Color de los botones del calendario
-              ),
-            ),
-          ),
-          child: child!,
-        );
-      },
+  void _onSort(int columnIndex, bool ascending) {
+    // Las columnas base para la lógica de ordenación.
+    // Usamos esta lista para mapear el columnIndex a la propiedad correcta del Estudiante.
+    final List<String> sortableColumnKeys = [
+      'ID', // Mapea a idEstudiante
+      'Nombres', // Mapea a nombres
+      'Apellidos', // Mapea a apellidos
+      'Cédula', // Mapea a cedula
+      // Puedes añadir 'Discapacidad' aquí si necesitas ordenar por ella
+    ];
+
+    if (columnIndex < 0 || columnIndex >= sortableColumnKeys.length) {
+      return; // Índice de columna fuera de rango
+    }
+
+    final String sortKey = sortableColumnKeys[columnIndex];
+
+    _estudiantes.sort((a, b) {
+      Comparable valueA;
+      Comparable valueB;
+
+      switch (sortKey) {
+        case 'ID':
+          valueA = a.idEstudiante ?? 0;
+          valueB = b.idEstudiante ?? 0;
+          break;
+        case 'Nombres':
+          valueA = a.nombres;
+          valueB = b.nombres;
+          break;
+        case 'Apellidos':
+          valueA = a.apellidos;
+          valueB = b.apellidos;
+          break;
+        case 'Cédula':
+          valueA = a.cedula;
+          valueB = b.cedula;
+          break;
+        // case 'Discapacidad':
+        //   valueA = a.discapacidad?.nombre ?? ''; // Asegúrate de que tu modelo Estudiante tenga una propiedad 'discapacidad' con un 'nombre'
+        //   valueB = b.discapacidad?.nombre ?? '';
+        //   break;
+        default:
+          return 0; // No ordenar
+      }
+
+      return ascending ? valueA.compareTo(valueB) : valueB.compareTo(valueA);
+    });
+
+    _filterEstudiantes(); // Re-aplicar el filtro después de ordenar
+
+    setState(() {
+      _sortColumnIndex = columnIndex;
+      _sortAscending = ascending;
+    });
+  }
+
+  void _filterEstudiantes() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredEstudiantes = List.from(_estudiantes);
+      } else {
+        _filteredEstudiantes = _estudiantes.where((estudiante) {
+          final nombreCompleto = '${estudiante.nombres} ${estudiante.apellidos}'.toLowerCase();
+          final cedula = estudiante.cedula.toLowerCase();
+          // Puedes añadir otros campos a la búsqueda si lo deseas
+          // final discapacidad = estudiante.discapacidad?.toLowerCase() ?? '';
+          return nombreCompleto.contains(query) || cedula.contains(query);
+        }).toList();
+      }
+    });
+  }
+
+  // Método para manejar la acción de editar un estudiante
+  void _handleEditEstudiante(TableData item) async {
+    final estudiante = item as Estudiante;
+    debugPrint('Editar estudiante: ${estudiante.nombres} ${estudiante.apellidos} (ID: ${estudiante.idEstudiante})');
+
+    // Navega al formulario, pasando el estudiante a editar
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => EstudianteFormScreen(estudianteToEdit: estudiante),
+      ),
     );
-    if (picked != null && picked != _fechaNacimiento) {
-      setState(() {
-        _fechaNacimiento = picked;
-      });
+
+    // Si el formulario devuelve 'true', recarga la lista de estudiantes
+    if (result == true) {
+      _fetchEstudiantes();
     }
   }
 
-  Future<void> _saveEstudiante() async {
-    if (!_formKey.currentState!.validate()) {
+  // Método para manejar la acción de eliminar un estudiante
+  void _handleDeleteEstudiante(TableData item) {
+    final estudiante = item as Estudiante;
+    debugPrint('Eliminar estudiante: ${estudiante.nombres} ${estudiante.apellidos}');
+
+    if (estudiante.idEstudiante == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se puede eliminar un estudiante sin un ID válido.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Guardando estudiante...'), duration: Duration(seconds: 1)),
-    );
-
-    try {
-      final String nombres = _nombresController.text;
-      final String apellidos = _apellidosController.text;
-      final String cedula = _cedulaController.text;
-      final String correo = _correoController.text;
-      final String telefono = _telefonoController.text;
-      final String direccion = _direccionController.text;
-      final String observaciones = _observacionesController.text;
-      final String seguimiento = _seguimientoController.text;
-
-      final int? idDiscapacidad = _selectedDiscapacidad?.idDiscapacidad;
-
-      if (idDiscapacidad == null) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor, selecciona una discapacidad.'),
-            backgroundColor: Colors.orange,
-          ),
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmar Eliminación'),
+          content: Text('¿Estás seguro de que quieres eliminar a ${estudiante.nombres} ${estudiante.apellidos}?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: AppColors.error),
+              child: const Text('Eliminar'),
+              onPressed: () async {
+                Navigator.of(context).pop(); // Cierra el diálogo de confirmación
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Eliminando estudiante...'), duration: Duration(seconds: 1)),
+                );
+                try {
+                  await _estudiantesService.eliminarEstudiante(estudiante.idEstudiante!);
+                  debugPrint('Estudiante eliminado con éxito');
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Estudiante "${estudiante.nombres} ${estudiante.apellidos}" eliminado exitosamente.'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  _fetchEstudiantes(); // Vuelve a cargar la lista de estudiantes
+                } catch (e) {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  setState(() {
+                    _errorMessage = 'Error al eliminar estudiante: ${e.toString().replaceFirst('Exception: ', '')}';
+                  });
+                   ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al eliminar estudiante: ${e.toString().replaceFirst('Exception: ', '')}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                } finally {
+                  setState(() {
+                    _isLoading = false;
+                  });
+                }
+              },
+            ),
+          ],
         );
-        return;
-      }
-
-      final bool isEditing = widget.estudianteToEdit != null;
-      final int? currentEstudianteId = widget.estudianteToEdit?.idEstudiante;
-
-      final Estudiante estudiantePayload = Estudiante(
-        idEstudiante: currentEstudianteId,
-        nombres: nombres,
-        apellidos: apellidos,
-        cedula: cedula,
-        correo: correo,
-        telefono: telefono,
-        direccion: direccion,
-        fechaNacimiento: _fechaNacimiento,
-        idDiscapacidad: idDiscapacidad,
-        observaciones: observaciones,
-        seguimiento: seguimiento,
-        discapacidad: _selectedDiscapacidad?.nombre, // Pasa el nombre de la discapacidad si está seleccionada
-        // No asignes fechaRegistro, fechaActualizacion aquí si solo los lees de la API
-      );
-
-      Estudiante? savedEstudiante;
-
-      if (isEditing) {
-        savedEstudiante = await _estudiantesService.actualizarEstudiante(estudiantePayload);
-      } else {
-        savedEstudiante = await _estudiantesService.crearEstudiante(estudiantePayload);
-      }
-
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Estudiante "${savedEstudiante?.nombres ?? 'Desconocido'}" ${isEditing ? 'actualizado' : 'guardado'} exitosamente.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.of(context).pop(true);
-    } catch (e) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al ${widget.estudianteToEdit != null ? 'actualizar' : 'guardar'} estudiante: ${e.toString().replaceFirst('Exception: ', '')}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      debugPrint('Error al guardar/actualizar estudiante: $e');
-    }
+      },
+    );
   }
 
-  void _submitForm() {
-    _saveEstudiante();
+  void _handleInfoEstudiante(TableData item) {
+    EstudiantesUtils.showEstudianteInfoModal(context, item as Estudiante);
+  }
+
+  void _toggleActionMode() {
+    setState(() {
+      _isActionMode = !_isActionMode;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    List<DataColumn2> estudianteColumns;
+    DataColumn2 actionColumn;
+
+    if (_isActionMode) {
+      actionColumn = DataColumn2(
+        label: const Text('Acciones'),
+        fixedWidth: defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS
+            ? 130
+            : 130,
+      );
+    } else {
+      actionColumn = DataColumn2(
+        label: const Text('Info'),
+        fixedWidth: defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS
+            ? 100
+            : 100,
+      );
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
+      estudianteColumns = [
+        DataColumn2(
+          label: const Text('ID'),
+          fixedWidth: 60,
+          onSort: (columnIndex, ascending) => _onSort(columnIndex, ascending),
+        ),
+        DataColumn2(
+          label: const Text('Nombres'),
+          fixedWidth: 140,
+          onSort: (columnIndex, ascending) => _onSort(columnIndex, ascending),
+        ),
+        actionColumn,
+      ];
+    } else {
+      estudianteColumns = [
+        DataColumn2(
+          label: const Text('ID'),
+          fixedWidth: 80,
+          onSort: (columnIndex, ascending) => _onSort(columnIndex, ascending),
+        ),
+        DataColumn2(
+          label: const Text('Nombres'),
+          size: ColumnSize.L,
+          onSort: (columnIndex, ascending) => _onSort(columnIndex, ascending),
+        ),
+        DataColumn2(
+          label: const Text('Apellidos'),
+          size: ColumnSize.L,
+          onSort: (columnIndex, ascending) => _onSort(columnIndex, ascending),
+        ),
+        DataColumn2(
+          label: const Text('Cédula'),
+          size: ColumnSize.M,
+          onSort: (columnIndex, ascending) => _onSort(columnIndex, ascending),
+        ),
+        actionColumn,
+      ];
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.estudianteToEdit == null ? 'Registrar Estudiante' : 'Editar Estudiante'),
+        title: const Text('Estudiantes'),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.textTitle,
+        actions: [
+          IconButton(
+            icon: Icon(_isActionMode ? Icons.info_outline : Icons.build),
+            onPressed: _toggleActionMode,
+            tooltip: _isActionMode ? 'Ver información' : 'Activar acciones',
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchEstudiantes,
+            tooltip: 'Recargar estudiantes',
+          ),
+          // MODIFICACIÓN: Cambia este botón para usar Navigator.push y esperar un resultado
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () async {
+              // Navega al formulario, sin pasar un estudiante (para creación)
+              final result = await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const EstudianteFormScreen(),
+                ),
+              );
+              // Si el formulario devuelve 'true' (indicando éxito), recarga la lista
+              if (result == true) {
+                _fetchEstudiantes();
+              }
+            },
+            tooltip: 'Añadir nuevo estudiante',
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              // Título
-              Padding(
-                padding: const EdgeInsets.only(bottom: 20.0),
-                child: Text(
-                  widget.estudianteToEdit == null ? 'Ingresa los datos del nuevo estudiante' : 'Edita los datos del estudiante',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-
-              // Campo Nombres
-              TextFormField(
-                controller: _nombresController,
-                decoration: const InputDecoration(
-                  labelText: 'Nombres',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingresa los nombres';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16.0),
-
-              // Campo Apellidos
-              TextFormField(
-                controller: _apellidosController,
-                decoration: const InputDecoration(
-                  labelText: 'Apellidos',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingresa los apellidos';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16.0),
-
-              // Campo Cédula
-              TextFormField(
-                controller: _cedulaController,
-                decoration: const InputDecoration(
-                  labelText: 'Cédula',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.credit_card),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingresa la cédula';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16.0),
-
-              // Campo Fecha de Nacimiento
-              InkWell(
-                onTap: () => _selectDate(context),
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: 'Fecha de Nacimiento',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.calendar_today),
-                    suffixIcon: _fechaNacimiento != null
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              setState(() {
-                                _fechaNacimiento = null;
-                              });
-                            },
-                          )
-                        : null,
-                  ),
-                  child: Text(
-                    _fechaNacimiento == null
-                        ? 'Selecciona una fecha'
-                        : '${_fechaNacimiento!.day}/${_fechaNacimiento!.month}/${_fechaNacimiento!.year}',
-                    style: TextStyle(
-                      color: _fechaNacimiento == null ? Colors.grey[700] : Colors.black,
-                      fontSize: 16.0,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: AppColors.error, fontSize: 18),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16.0),
-
-              // Campo Correo
-              TextFormField(
-                controller: _correoController,
-                decoration: const InputDecoration(
-                  labelText: 'Correo',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value != null && value.isNotEmpty && !value.contains('@')) {
-                    return 'Introduce un correo válido';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16.0),
-
-              // Campo Teléfono
-              TextFormField(
-                controller: _telefonoController,
-                decoration: const InputDecoration(
-                  labelText: 'Teléfono',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.phone),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 16.0),
-
-              // Campo Dirección
-              TextFormField(
-                controller: _direccionController,
-                decoration: const InputDecoration(
-                  labelText: 'Dirección',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.home),
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16.0),
-
-              // Campo Observaciones
-              TextFormField(
-                controller: _observacionesController,
-                decoration: const InputDecoration(
-                  labelText: 'Observaciones',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.notes),
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16.0),
-
-              // Campo Seguimiento
-              TextFormField(
-                controller: _seguimientoController,
-                decoration: const InputDecoration(
-                  labelText: 'Seguimiento',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.track_changes),
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16.0),
-
-              // Dropdown para Discapacidad
-              _isLoadingDiscapacidades
-                  ? const Center(child: CircularProgressIndicator())
-                  : _discapacidadesError != null
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Text(
-                            _discapacidadesError!,
-                            style: const TextStyle(color: Colors.red),
-                            textAlign: TextAlign.center,
+                )
+              : Padding(
+                  padding: const EdgeInsets.all(15.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SearchBarWidget(
+                        controller: _searchController,
+                        hintText: 'Buscar estudiante por nombre o cédula...',
+                        onChanged: (query) => _filterEstudiantes(),
+                      ),
+                      const SizedBox(height: 15.0),
+                      Expanded(
+                        child: Card(
+                          elevation: 8.0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0),
                           ),
-                        )
-                      : DropdownButtonFormField<Discapacidad>(
-                          value: _selectedDiscapacidad,
-                          decoration: const InputDecoration(
-                            labelText: 'Discapacidad',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.wheelchair_pickup),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.max,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: 8.0,
+                                  top: 8.0,
+                                  left: 12.0,
+                                  right: 12.0,
+                                ),
+                                child: Text(
+                                  'LISTA DE ESTUDIANTES',
+                                  textAlign: TextAlign.left,
+                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                      ),
+                                ),
+                              ),
+                              const Divider(),
+                              _filteredEstudiantes.isEmpty
+                                  ? const Expanded(
+                                      child: Center(
+                                        child: Text(
+                                          'No hay estudiantes registrados o no se encontraron resultados.',
+                                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    )
+                                  : Expanded(
+                                      child: CustomDataTable<Estudiante>(
+                                        data: _filteredEstudiantes,
+                                        columns: estudianteColumns,
+                                        minWidth: 700,
+                                        actionCallbacks: {
+                                          'info': _handleInfoEstudiante,
+                                          'edit': _handleEditEstudiante, // Ya estaba correcto
+                                          'delete': _handleDeleteEstudiante, // Ya estaba correcto
+                                        },
+                                        sortColumnIndex: _sortColumnIndex,
+                                        sortAscending: _sortAscending,
+                                      ),
+                                    ),
+                            ],
                           ),
-                          hint: const Text('Selecciona una discapacidad'),
-                          validator: (value) {
-                            if (value == null) {
-                              return 'Por favor selecciona una discapacidad';
-                            }
-                            return null;
-                          },
-                          items: _discapacidades.map((Discapacidad discapacidad) {
-                            return DropdownMenuItem<Discapacidad>(
-                              value: discapacidad,
-                              child: Text(discapacidad.nombre),
-                            );
-                          }).toList(),
-                          onChanged: (Discapacidad? newValue) {
-                            setState(() {
-                              _selectedDiscapacidad = newValue;
-                            });
-                          },
-                          // Esto es clave: si `_selectedDiscapacidad` no es uno de los objetos en `_discapacidades`,
-                          // el `DropdownButtonFormField` puede no mostrar nada.
-                          // Asegurarse que el objeto seleccionado es una instancia de la lista.
                         ),
-              const SizedBox(height: 20.0),
-
-              // Botón de Guardar/Actualizar
-              ElevatedButton.icon(
-                onPressed: _submitForm,
-                icon: Icon(widget.estudianteToEdit == null ? Icons.save : Icons.update),
-                label: Text(widget.estudianteToEdit == null ? 'Guardar Estudiante' : 'Actualizar Estudiante'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.textTitle,
-                  padding: const EdgeInsets.symmetric(vertical: 15.0),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      // Si tienes un FloatingActionButton separado para añadir, asegúrate de que también use Navigator.push
+      // y espere un resultado. Por ahora, el botón "Add" en el AppBar es suficiente.
     );
   }
 }
