@@ -8,11 +8,15 @@ import 'package:smged/api/services/discapacidades_service.dart'; // Importa el s
 import 'package:smged/api/models/estudiante.dart'; // ¡Asegúrate de importar tu modelo Estudiante!
 import 'package:smged/api/services/estudiantes_service.dart'; // ¡Asegúrate de importar tu servicio EstudiantesService!
 import 'package:collection/collection.dart'; // ¡Añade esta línea!
-class EstudianteFormScreen extends StatefulWidget {
-  // 1. Añade un constructor para recibir un Estudiante opcional
-  final Estudiante? estudianteToEdit; // Puede ser nulo si es una creación
 
-  const EstudianteFormScreen({super.key, this.estudianteToEdit}); // Constructor modificado
+// Importa para usar TextInputFormatter
+import 'package:flutter/services.dart';
+
+
+class EstudianteFormScreen extends StatefulWidget {
+  final Estudiante? estudianteToEdit;
+
+  const EstudianteFormScreen({super.key, this.estudianteToEdit});
 
   @override
   State<EstudianteFormScreen> createState() => _EstudianteFormScreenState();
@@ -21,7 +25,6 @@ class EstudianteFormScreen extends StatefulWidget {
 class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controladores para los campos de texto
   final TextEditingController _nombresController = TextEditingController();
   final TextEditingController _apellidosController = TextEditingController();
   final TextEditingController _cedulaController = TextEditingController();
@@ -31,131 +34,53 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
   final TextEditingController _observacionesController = TextEditingController();
   final TextEditingController _seguimientoController = TextEditingController();
 
-  // Variables de estado para los campos específicos
   DateTime? _fechaNacimiento;
-  List<Discapacidad> _discapacidades = []; // Lista de discapacidades para el Dropdown
-  Discapacidad? _selectedDiscapacidad; // La discapacidad seleccionada en el Dropdown
+  List<Discapacidad> _discapacidades = [];
+  Discapacidad? _selectedDiscapacidad;
 
-  // Instancia del servicio para obtener las discapacidades
   final DiscapacidadesService _discapacidadesService = DiscapacidadesService();
-  bool _isLoadingDiscapacidades = true; // Para mostrar un indicador de carga
-  String? _discapacidadesError; // Para manejar errores al cargar las discapacidades
+  bool _isLoadingDiscapacidades = true;
+  String? _discapacidadesError;
 
   final EstudiantesService _estudiantesService = EstudiantesService();
 
+  // --- NUEVAS VARIABLES PARA LA CÉDULA ---
+  String _cedulaPrefix = 'V-'; // Prefijo inicial
+  // --- FIN NUEVAS VARIABLES ---
 
-Future<void> _saveEstudiante() async {
-  if (!_formKey.currentState!.validate()) {
-    return;
-  }
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Guardando estudiante...'), duration: Duration(seconds: 1)),
-  );
-
-  try {
-    final String nombres = _nombresController.text;
-    final String apellidos = _apellidosController.text;
-    final String cedula = _cedulaController.text;
-    final String correo = _correoController.text;
-    final String telefono = _telefonoController.text;
-    final String direccion = _direccionController.text;
-    final String observaciones = _observacionesController.text;
-    final String seguimiento = _seguimientoController.text;
-
-    final int? idDiscapacidad = _selectedDiscapacidad?.idDiscapacidad;
-
-    if (idDiscapacidad == null) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor, selecciona una discapacidad.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    // Determinar si estamos creando o editando
-    final bool isEditing = widget.estudianteToEdit != null;
-    final int? currentEstudianteId = widget.estudianteToEdit?.idEstudiante; // Obtén el ID si estamos editando
-
-    // Crear la instancia del modelo Estudiante
-    final Estudiante estudiantePayload = Estudiante(
-      idEstudiante: currentEstudianteId, // El ID solo se incluirá si estamos editando
-      nombres: nombres,
-      apellidos: apellidos,
-      cedula: cedula,
-      correo: correo,
-      telefono: telefono,
-      direccion: direccion,
-      fechaNacimiento: _fechaNacimiento,
-      idDiscapacidad: idDiscapacidad,
-      observaciones: observaciones,
-      seguimiento: seguimiento,
-      // No asignes fechaRegistro, fechaActualizacion, discapacidad aquí si solo los lees de la API
-      // El constructor de Estudiante ya los tiene como null si no se proporcionan
-    );
-
-    Estudiante? savedEstudiante; // Para guardar la respuesta de la API
-
-    if (isEditing) {
-      // Si estamos editando, llama al método de actualización
-      savedEstudiante = await _estudiantesService.actualizarEstudiante(estudiantePayload);
-    } else {
-      // Si estamos creando, llama al método de creación
-      savedEstudiante = await _estudiantesService.crearEstudiante(estudiantePayload);
-    }
-
-    // Si llega aquí, significa que la operación fue exitosa
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Estudiante "${savedEstudiante?.nombres ?? 'Desconocido'}" ${isEditing ? 'actualizado' : 'guardado'} exitosamente.'),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    Navigator.of(context).pop(true); // Pasa 'true' para indicar éxito y refrescar la lista
-  } catch (e) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error al ${widget.estudianteToEdit != null ? 'actualizar' : 'guardar'} estudiante: ${e.toString().replaceFirst('Exception: ', '')}'),
-        backgroundColor: Colors.red,
-      ),
-    );
-    debugPrint('Error al guardar/actualizar estudiante: $e');
-  }
-}
 
   @override
   void initState() {
     super.initState();
-    _fetchDiscapacidades(); // Siempre carga las discapacidades
+    _fetchDiscapacidades();
 
-    // 2. Inicializar el formulario si se está editando un estudiante
     if (widget.estudianteToEdit != null) {
       final estudiante = widget.estudianteToEdit!;
       _nombresController.text = estudiante.nombres;
       _apellidosController.text = estudiante.apellidos;
-      _cedulaController.text = estudiante.cedula;
-      _correoController.text = estudiante.correo ?? ''; // Usar '' si es nulo para los controladores
+      // --- MODIFICACIÓN PARA CÉDULA AL EDITAR ---
+      // Si la cédula tiene un prefijo, extráelo
+      if (estudiante.cedula.startsWith('V-')) {
+        _cedulaPrefix = 'V-';
+        _cedulaController.text = estudiante.cedula.substring(2); // Elimina "V-"
+      } else if (estudiante.cedula.startsWith('E-')) {
+        _cedulaPrefix = 'E-';
+        _cedulaController.text = estudiante.cedula.substring(2); // Elimina "E-"
+      } else {
+        _cedulaController.text = estudiante.cedula; // Si no hay prefijo conocido
+      }
+      // --- FIN MODIFICACIÓN ---
+      _correoController.text = estudiante.correo ?? '';
       _telefonoController.text = estudiante.telefono ?? '';
       _direccionController.text = estudiante.direccion ?? '';
       _observacionesController.text = estudiante.observaciones ?? '';
       _seguimientoController.text = estudiante.seguimiento ?? '';
       _fechaNacimiento = estudiante.fechaNacimiento;
-
-      // Importante: Necesitas que _selectedDiscapacidad se seleccione basado en idDiscapacidad del estudiante
-      // Esto se hará DESPUÉS de que _discapacidades se carguen.
-      // Por eso, la llamada a _setInitialDiscapacidadSelection.
     }
   }
-  // Nuevo método para seleccionar la discapacidad inicial (llamado después de cargar _discapacidades)
+
   void _setInitialDiscapacidadSelection() {
     if (widget.estudianteToEdit != null && widget.estudianteToEdit!.idDiscapacidad != null) {
-      // Busca la discapacidad en la lista cargada por su ID
       final initialDiscapacidad = _discapacidades.firstWhereOrNull(
         (d) => d.idDiscapacidad == widget.estudianteToEdit!.idDiscapacidad,
       );
@@ -166,8 +91,8 @@ Future<void> _saveEstudiante() async {
       }
     }
   }
-  // Función asíncrona para obtener las discapacidades de la API
-  @override // Asegúrate que esta anotación este aqui
+
+  @override
   Future<void> _fetchDiscapacidades() async {
     setState(() {
       _isLoadingDiscapacidades = true;
@@ -177,7 +102,6 @@ Future<void> _saveEstudiante() async {
       final fetchedDiscapacidades = await _discapacidadesService.obtenerDiscapacidades();
       setState(() {
         _discapacidades = fetchedDiscapacidades;
-        // 3. Llama a este método después de cargar las discapacidades
         _setInitialDiscapacidadSelection();
       });
     } catch (e) {
@@ -190,9 +114,89 @@ Future<void> _saveEstudiante() async {
       });
     }
   }
+
+  Future<void> _saveEstudiante() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Guardando estudiante...'), duration: Duration(seconds: 1)),
+    );
+
+    try {
+      final String nombres = _nombresController.text;
+      final String apellidos = _apellidosController.text;
+      // --- MODIFICACIÓN PARA CÉDULA AL GUARDAR ---
+      final String cedulaCompleta = _cedulaPrefix + _cedulaController.text;
+      // --- FIN MODIFICACIÓN ---
+      final String correo = _correoController.text;
+      final String telefono = _telefonoController.text;
+      final String direccion = _direccionController.text;
+      final String observaciones = _observacionesController.text;
+      final String seguimiento = _seguimientoController.text;
+
+      final int? idDiscapacidad = _selectedDiscapacidad?.idDiscapacidad;
+
+      if (idDiscapacidad == null) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor, selecciona una discapacidad.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      final bool isEditing = widget.estudianteToEdit != null;
+      final int? currentEstudianteId = widget.estudianteToEdit?.idEstudiante;
+
+      final Estudiante estudiantePayload = Estudiante(
+        idEstudiante: currentEstudianteId,
+        nombres: nombres,
+        apellidos: apellidos,
+        cedula: cedulaCompleta, // Usa la cédula con prefijo
+        correo: correo,
+        telefono: telefono,
+        direccion: direccion,
+        fechaNacimiento: _fechaNacimiento,
+        idDiscapacidad: idDiscapacidad,
+        observaciones: observaciones,
+        seguimiento: seguimiento,
+      );
+
+      Estudiante? savedEstudiante;
+
+      if (isEditing) {
+        savedEstudiante = await _estudiantesService.actualizarEstudiante(estudiantePayload);
+      } else {
+        savedEstudiante = await _estudiantesService.crearEstudiante(estudiantePayload);
+      }
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Estudiante "${savedEstudiante?.nombres ?? 'Desconocido'}" ${isEditing ? 'actualizado' : 'guardado'} exitosamente.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al ${widget.estudianteToEdit != null ? 'actualizar' : 'guardar'} estudiante: ${e.toString().replaceFirst('Exception: ', '')}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      debugPrint('Error al guardar/actualizar estudiante: $e');
+    }
+  }
+
   @override
   void dispose() {
-    // Liberar los controladores cuando el widget se destruye
     _nombresController.dispose();
     _apellidosController.dispose();
     _cedulaController.dispose();
@@ -204,34 +208,27 @@ Future<void> _saveEstudiante() async {
     super.dispose();
   }
 
-  // Función para manejar el envío del formulario
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       debugPrint('Formulario validado y listo para guardar/actualizar.');
       debugPrint('Nombres: ${_nombresController.text}');
       debugPrint('Apellidos: ${_apellidosController.text}');
-      debugPrint('Cédula: ${_cedulaController.text}');
+      debugPrint('Cédula: $_cedulaPrefix${_cedulaController.text}'); // Muestra la cédula completa
       debugPrint('Correo: ${_correoController.text}');
       debugPrint('Teléfono: ${_telefonoController.text}');
       debugPrint('Dirección: ${_direccionController.text}');
       debugPrint('Fecha de Nacimiento: $_fechaNacimiento');
-      // Aquí es donde obtienes el ID de la discapacidad seleccionada:
       debugPrint('Discapacidad ID: ${_selectedDiscapacidad?.idDiscapacidad}');
       debugPrint('Discapacidad Nombre: ${_selectedDiscapacidad?.nombre}');
       debugPrint('Observaciones: ${_observacionesController.text}');
       debugPrint('Seguimiento: ${_seguimientoController.text}');
 
-      // Aquí deberías llamar a tu servicio para guardar los datos en la API
-      // Por ejemplo: await _estudianteService.crearEstudiante(...)
       _saveEstudiante();
-      //Navigator.of(context).pop(); // Vuelve a la pantalla anterior
-      
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Lógica para limitar el ancho en escritorio/web
     final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux ||
@@ -241,7 +238,7 @@ Future<void> _saveEstudiante() async {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Formulario de Estudiante'),
+        title: Text(widget.estudianteToEdit == null ? 'Registrar Estudiante' : 'Editar Estudiante'), // Título dinámico
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.textTitle,
       ),
@@ -266,9 +263,9 @@ Future<void> _saveEstudiante() async {
                       Text(
                         'Datos Personales',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 20.0),
@@ -302,23 +299,64 @@ Future<void> _saveEstudiante() async {
                         },
                       ),
                       const SizedBox(height: 16.0),
-                      TextFormField(
-                        controller: _cedulaController,
-                        decoration: const InputDecoration(
-                          labelText: 'Cédula',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.credit_card),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor, introduce la cédula.';
-                          }
-                          return null;
-                        },
+                      // --- CAMBIOS PARA EL CAMPO DE CÉDULA ---
+                      Row(
+                        children: [
+                          // Dropdown para el prefijo V- o E-
+                          DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _cedulaPrefix,
+                              items: const [
+                                DropdownMenuItem(value: 'V-', child: Text('V-')),
+                                DropdownMenuItem(value: 'E-', child: Text('E-')),
+                              ],
+                              onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                  setState(() {
+                                    _cedulaPrefix = newValue;
+                                  });
+                                }
+                              },
+                              dropdownColor: Theme.of(context).cardColor, // O el color que desees
+                              icon: const Icon(Icons.arrow_drop_down),
+                              elevation: 8,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          const SizedBox(width: 8.0), // Espacio entre el dropdown y el campo de texto
+                          Expanded(
+                            child: TextFormField(
+                              controller: _cedulaController,
+                              decoration: InputDecoration(
+                                labelText: 'Cédula',
+                                border: const OutlineInputBorder(),
+                                prefixIcon: const Icon(Icons.credit_card),
+                                // Aquí ya no es necesario prefixText, el dropdown lo maneja
+                                // prefixText: _cedulaPrefix, // Ya no se usa aquí
+                                // prefixStyle: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              keyboardType: TextInputType.number, // Solo números después del prefijo
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly, // Permite solo dígitos
+                                LengthLimitingTextInputFormatter(9), // Limita la longitud a 9 dígitos (ej: 012345678)
+                              ],
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Por favor, introduce la cédula.';
+                                }
+                                // Puedes añadir una validación más específica aquí, por ejemplo, longitud exacta
+                                if (value.length < 7 || value.length > 9) { // Ajusta la longitud según tu necesidad
+                                  return 'La cédula debe tener entre 7 y 9 dígitos.';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
                       ),
+                      // --- FIN CAMBIOS PARA EL CAMPO DE CÉDULA ---
                       const SizedBox(height: 16.0),
-                      // Tu widget reutilizable para la fecha
-                      DatePickerFormField( // Usamos el nombre actualizado del archivo
+                      DatePickerFormField(
                         labelText: 'Fecha de Nacimiento',
                         initialDate: _fechaNacimiento,
                         firstDate: DateTime(1900),
@@ -341,9 +379,9 @@ Future<void> _saveEstudiante() async {
                       Text(
                         'Información de Contacto',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16.0),
@@ -355,6 +393,12 @@ Future<void> _saveEstudiante() async {
                           prefixIcon: Icon(Icons.email),
                         ),
                         keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty && !value.contains('@')) {
+                            return 'Introduce un correo electrónico válido.';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 16.0),
                       TextFormField(
@@ -365,6 +409,10 @@ Future<void> _saveEstudiante() async {
                           prefixIcon: Icon(Icons.phone),
                         ),
                         keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly, // Permite solo dígitos
+                          LengthLimitingTextInputFormatter(11), // Limita la longitud a 11 (ej: 04141234567)
+                        ],
                       ),
                       const SizedBox(height: 16.0),
                       TextFormField(
@@ -380,18 +428,16 @@ Future<void> _saveEstudiante() async {
                       Text(
                         'Datos Adicionales',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16.0),
-
-                      // --- ¡Aquí está el DropdownButtonFormField para Discapacidad! ---
                       _isLoadingDiscapacidades
-                          ? const Center(child: CircularProgressIndicator()) // Muestra carga
+                          ? const Center(child: CircularProgressIndicator())
                           : _discapacidadesError != null
-                              ? Text( // Muestra error si falla la carga
+                              ? Text(
                                   _discapacidadesError!,
                                   style: const TextStyle(color: AppColors.error),
                                   textAlign: TextAlign.center,
@@ -402,17 +448,16 @@ Future<void> _saveEstudiante() async {
                                     border: OutlineInputBorder(),
                                     prefixIcon: Icon(Icons.accessible),
                                   ),
-                                  value: _selectedDiscapacidad, // El valor seleccionado
-                                  hint: const Text('Selecciona una discapacidad'), // Texto cuando no hay selección
-                                  isExpanded: true, // Para que ocupe todo el ancho
+                                  value: _selectedDiscapacidad,
+                                  hint: const Text('Selecciona una discapacidad'),
+                                  isExpanded: true,
                                   items: _discapacidades.map((discapacidad) {
                                     return DropdownMenuItem<Discapacidad>(
-                                      value: discapacidad, // El valor del ítem es el objeto Discapacidad
-                                      child: Text(discapacidad.nombre), // Lo que se muestra es el nombre
+                                      value: discapacidad,
+                                      child: Text(discapacidad.nombre),
                                     );
                                   }).toList(),
                                   onChanged: (Discapacidad? newValue) {
-                                    // Cuando el usuario selecciona, actualiza el estado
                                     setState(() {
                                       _selectedDiscapacidad = newValue;
                                     });
@@ -424,8 +469,6 @@ Future<void> _saveEstudiante() async {
                                     return null;
                                   },
                                 ),
-                      // --- Fin del DropdownButtonFormField ---
-
                       const SizedBox(height: 16.0),
                       TextFormField(
                         controller: _observacionesController,
@@ -450,7 +493,7 @@ Future<void> _saveEstudiante() async {
                       ElevatedButton.icon(
                         onPressed: _submitForm,
                         icon: const Icon(Icons.save),
-                        label: const Text('Guardar Estudiante'),
+                        label: Text(widget.estudianteToEdit == null ? 'Guardar Estudiante' : 'Actualizar Estudiante'), // Texto del botón dinámico
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: AppColors.textTitle,
