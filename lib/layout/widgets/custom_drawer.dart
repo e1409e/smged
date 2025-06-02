@@ -1,12 +1,12 @@
 // lib/layout/widgets/custom_drawer.dart
 import 'package:flutter/material.dart';
 
-// Importa aquí todas las pantallas a las que el Drawer va a navegar
-import 'package:smged/layout/screens/estudiantes_screen.dart';
+// Importa las utilidades de diseño
 import 'package:smged/layout/widgets/custom_TextStyles.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
-// import 'package:smged/layout/screens/citas_screen.dart';
-// import 'package:smged/layout/screens/historial_medico_screen.dart';
+
+// Importa tu archivo de rutas con un alias para evitar conflictos
+import 'package:smged/routes.dart' as app_routes;
 
 class CustomDrawer extends StatelessWidget {
   final VoidCallback onLogout; // El callback de logout que se ejecuta al confirmar
@@ -15,9 +15,6 @@ class CustomDrawer extends StatelessWidget {
 
   // Función para mostrar el diálogo de confirmación antes de cerrar sesión
   void _confirmLogout(BuildContext context) {
-    // Almacenamos el context del Drawer antes de que se cierre
-    final drawerContext = context;
-
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) { // Usamos dialogContext para el diálogo
@@ -36,9 +33,7 @@ class CustomDrawer extends StatelessWidget {
               onPressed: () {
                 // Primero cierra el diálogo de confirmación
                 Navigator.of(dialogContext).pop(); 
-                // Asegúrate de que el Drawer esté cerrado antes de llamar a onLogout.
-                // En este escenario, el Drawer ya fue cerrado por el onTap del ListTile.
-                // Llamamos directamente al onLogout que desencadena la lógica en MyApp.
+                // Llama directamente al onLogout que desencadena la lógica en MyApp.
                 onLogout(); 
               },
             ),
@@ -52,94 +47,108 @@ class CustomDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Drawer(
       child: ListView(
-        padding: EdgeInsets.zero,
+        padding: EdgeInsets.zero, // Elimina el padding por defecto del ListView
         children: <Widget>[
+          // Encabezado del Drawer con información de usuario
           DrawerHeader(
             decoration: BoxDecoration(
-              color: AppColors.primary,
+              color: AppColors.primary, // Usa tu color primario personalizado
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const CircleAvatar(
                   radius: 30,
-                  backgroundColor: AppColors.background,
-                  child: Icon(Icons.person, size: 30, color: Colors.blue),
+                  backgroundColor: AppColors.background, // Color de fondo del avatar
+                  child: Icon(Icons.person, size: 30, color: AppColors.primary), // Icono de persona
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 10), // Espacio entre el avatar y el texto
                 Text(
-                  'Nombre de Usuario',
-                  style: TextStyles.title
+                  'Nombre de Usuario', // Placeholder para el nombre de usuario
+                  style: TextStyles.title.copyWith(color: AppColors.textTitle), // Estilo de texto del título
                 ),
-                const Text(
-                  'Rol (Ej. Psicólogo/Administrador)',
-                  style: TextStyles.subtitle
+                Text(
+                  'Rol (Ej. Psicólogo/Administrador)', // Placeholder para el rol
+                  style: TextStyles.subtitle.copyWith(color: AppColors.textTitle), // Estilo de texto del subtítulo
                 ),
               ],
             ),
           ),
 
+          // Elemento del menú: Dashboard
           ListTile(
             leading: const Icon(Icons.dashboard),
             title: const Text('Dashboard'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
-              // En este caso, el "Dashboard" es la Home o el Dashboard específico del rol.
-              // Si el usuario ya está en su Dashboard, simplemente cierra el Drawer.
-              // Si no, podrías usar Navigator.pushReplacement o Navigator.push si quieres añadirlo al stack.
+              // Si el Dashboard es la ruta '/home' o alguna ruta específica de un rol, puedes navegar:
+              // Navigator.pushReplacementNamed(context, '/home'); // Para ir al home y limpiar el stack
+              // O simplemente cierra el drawer si ya estás en el dashboard principal
             },
           ),
+          
+          // Elemento del menú: Estudiantes
           ListTile(
             leading: const Icon(Icons.school),
             title: const Text('Estudiantes'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
-              Navigator.pushNamed(context, '/estudiantes'); // Navega usando rutas nombradas
+              // Navega a la ruta de la lista de estudiantes usando la constante
+              Navigator.pushNamed(context, app_routes.AppRoutes.estudiantesList); 
             },
           ),
+          
+          // Elemento del menú: Citas
           ListTile(
             leading: const Icon(Icons.event),
             title: const Text('Citas'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
-              // Navigator.pushNamed(context, '/citas'); // Descomentar cuando la ruta esté definida
+              // Navega a la ruta de la lista de citas usando la constante
+              Navigator.pushNamed(context, app_routes.AppRoutes.citasList); 
             },
           ),
+          
+          // Elemento del menú: Historial Médico (descomenta y ajusta cuando la ruta esté lista)
           ListTile(
             leading: const Icon(Icons.history),
             title: const Text('Historial Médico'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
-              // Navigator.pushNamed(context, '/historialMedico'); // Descomentar cuando la ruta esté definida
+              // Navigator.pushNamed(context, app_routes.AppRoutes.historialMedico); // Descomentar cuando la ruta esté definida
             },
           ),
+          
+          // Elemento del menú: Reportes (descomenta y ajusta cuando la ruta esté lista)
           ListTile(
             leading: const Icon(Icons.report),
             title: const Text('Reportes'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
-              // Navigator.pushNamed(context, '/reportes'); // Descomentar cuando la ruta esté definida
+              // Navigator.pushNamed(context, app_routes.AppRoutes.reportes); // Descomentar cuando la ruta esté definida
             },
           ),
+          
+          // Elemento del menú: Configuración (descomenta y ajusta cuando la ruta esté lista)
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Configuración'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
-              // Navigator.pushNamed(context, '/configuracion'); // Descomentar cuando la ruta esté definida
+              // Navigator.pushNamed(context, app_routes.AppRoutes.configuracion); // Descomentar cuando la ruta esté definida
             },
           ),
-          const Divider(),
+          
+          const Divider(), // Línea divisoria entre opciones
 
           // Opción de Cerrar Sesión
           ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
+            leading: const Icon(Icons.logout, color: AppColors.error), // Icono de logout en color de error
+            title: const Text('Cerrar Sesión', style: TextStyle(color: AppColors.error)), // Texto de logout en color de error
             onTap: () {
-              // Primero, cierra el Drawer inmediatamente.
-              // Esto asegura que la navegación principal no se vea obstaculizada por un Drawer abierto.
+              // Cierra el Drawer inmediatamente para una mejor experiencia de usuario
               Navigator.pop(context); 
-              // Luego, muestra el diálogo de confirmación.
+              // Luego, muestra el diálogo de confirmación antes de realmente cerrar la sesión
               _confirmLogout(context); 
             },
           ),

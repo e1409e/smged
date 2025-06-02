@@ -1,44 +1,44 @@
 // lib/routes.dart
 import 'package:flutter/material.dart';
 
-// No necesitas importar LoginScreen o HomeScreen aquí,
-// ya que la lógica principal de autenticación se maneja en main.dart
-// import 'package:smged/layout/screens/login_screen.dart';
-// import 'package:smged/layout/screens/home_screen.dart';
-
 import 'package:smged/layout/screens/estudiantes_screen.dart';
 import 'package:smged/layout/screens/forms/estudiante_form_screen.dart';
+import 'package:smged/layout/screens/citas_screen.dart'; // <-- ¡IMPORTA LA PANTALLA DE CITAS!
+import 'package:smged/layout/screens/forms/cita_form_screen.dart'; // <-- ¡IMPORTA LA PANTALLA DEL FORMULARIO DE CITAS!
+
 
 /// Una clase que contiene las constantes de las rutas de tu aplicación.
 class AppRoutes {
-  // initialRoute y loginRoute/homeRoute ya no son relevantes para el flujo principal de auth
-  // static const String initialRoute = '/';
-  // static const String loginRoute = '/login';
-  // static const String homeRoute = '/home';
-
   static const String estudiantesList =
       '/estudiantes'; // Ruta para la lista de estudiantes
   static const String estudianteForm =
       '/estudianteForm'; // Ruta para el formulario de estudiante
 
+  static const String citasList = '/citas'; // <-- ¡NUEVA RUTA PARA LA LISTA DE CITAS!
+  static const String citaForm = '/citaForm'; // <-- ¡NUEVA RUTA PARA EL FORMULARIO DE CITAS!
+
   // Puedes definir aquí otras rutas para tus dashboards si las usas con Navigator.pushNamed
+  // static const String adminDashboardRoute = '/adminDashboard';
   // static const String adminDashboardRoute = '/adminDashboard';
   // static const String docenteDashboardRoute = '/docenteDashboard';
 }
 
 // Esta función ahora solo devuelve un mapa de rutas para navegación INTERNA.
-// YA NO RECIBE NINGÚN PARÁMETRO DE AUTENTICACIÓN.
 Map<String, WidgetBuilder> getApplicationRoutes() {
-  // <--- ¡Sin parámetros aquí!
   return <String, WidgetBuilder>{
-    // La ruta inicial para la decisión de auth se maneja en main.dart (propiedad 'home')
-    // por lo tanto, no se define aquí.
+    // Rutas de Estudiantes
     AppRoutes.estudiantesList: (BuildContext context) =>
         const EstudiantesScreen(),
     AppRoutes.estudianteForm: (BuildContext context) =>
         const EstudianteFormScreen(),
 
-    // Agrega aquí el resto de tus rutas internas.
+    // Rutas de Citas
+    AppRoutes.citasList: (BuildContext context) =>
+        const CitasScreen(), // <-- ¡AÑADE LA RUTA DE LA LISTA DE CITAS!
+    AppRoutes.citaForm: (BuildContext context) =>
+        const CitaFormScreen(), // <-- ¡AÑADE LA RUTA DEL FORMULARIO DE CITAS!
+
+    // Agrega aquí el resto de tus rutas internas (Historial Médico, Reportes, Configuración, etc.).
     // AppRoutes.adminDashboardRoute: (BuildContext context) => const AdminDashboardScreen(),
     // AppRoutes.docenteDashboardRoute: (BuildContext context) => const DocenteDashboardScreen(),
   };

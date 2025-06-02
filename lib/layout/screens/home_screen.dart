@@ -31,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchCitasPendientesCount() async {
     try {
-      final List<Cita> citas = await _citasService.obtenerTodasLasCitas();
+      final List<Cita> citas = await _citasService.obtenerCitas();
       final int pendientes = citas.where((cita) => cita.pendiente == 1).length;
       setState(() {
         _citasPendientesCount = pendientes;

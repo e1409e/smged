@@ -1,12 +1,22 @@
 import 'dart:ui';
 
+import 'package:flutter/material.dart';
+
 class AppColors{
   //Colores principales
   static const Color primary = Color(0xFF2081C2);
-  static const Color warning = Color(0xFFCBDF1E);
-  static const Color error = Color(0xFFDF1E1E);
-  //Backgrounds
-  static const Color background = Color(0xFFE1E1E6);
+
+ // Colores de estado/feedback
+  static const Color success = Colors.green; // Verde para éxito
+  static const Color error = Colors.red;     // Rojo para errores
+  static const Color warning = Colors.orange; // Naranja para advertencias
+  static const Color info = Colors.blue;      // <-- ¡AÑADIDO ESTE COLOR! Azul para información
+  static const Color background = Color(0xFFF5F5F5); // Fondo claro
+  static const Color surface = Colors.white; // Superficies como tarjetas o dialogos
+
+  // Otros colores si los necesitas
+  static const Color greyLight = Color(0xFFE0E0E0);
+  static const Color greyDark = Color(0xFF424242);
 
   //widget
   static const Color indicator = Color(0xFF2030C2);

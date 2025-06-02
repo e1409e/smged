@@ -7,9 +7,10 @@ part of 'cita.dart';
 // **************************************************************************
 
 Cita _$CitaFromJson(Map<String, dynamic> json) => Cita(
-  id_citas: (json['id_citas'] as num).toInt(),
+  id_citas: (json['id_citas'] as num?)?.toInt(),
   id_estudiante: (json['id_estudiante'] as num).toInt(),
-  fecha_cita: DateTime.parse(json['fecha_cita'] as String),
+  nombre_estudiante: json['nombres'] as String?,
+  fecha_cita: Cita._dateTimeFromJson(json['fecha_cita'] as String),
   motivo_cita: json['motivo_cita'] as String?,
   pendiente: (json['pendiente'] as num).toInt(),
 );
@@ -17,7 +18,7 @@ Cita _$CitaFromJson(Map<String, dynamic> json) => Cita(
 Map<String, dynamic> _$CitaToJson(Cita instance) => <String, dynamic>{
   'id_citas': instance.id_citas,
   'id_estudiante': instance.id_estudiante,
-  'fecha_cita': instance.fecha_cita.toIso8601String(),
+  'fecha_cita': Cita._dateTimeToJson(instance.fecha_cita),
   'motivo_cita': instance.motivo_cita,
   'pendiente': instance.pendiente,
 };
