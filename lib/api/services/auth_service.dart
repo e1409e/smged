@@ -17,12 +17,18 @@ class AuthService {
       if (Platform.isAndroid) {
         return 'http://10.0.2.2:3000';
       } else {
+        // Para iOS (simulador o físico) y otros, 127.0.0.1 (localhost) o la IP de tu máquina host.
+        // Si usas un dispositivo iOS físico en la misma red Wi-Fi, deberías usar la IP de tu PC.
         return 'http://127.0.0.1:3000';
       }
     }
   }
 
-  static const String _loginEndpoint = '/usuarios/login';
+  // ¡CORRECCIÓN FINAL AQUÍ!
+  // Basado en tu archivo de rutas de Node.js (router.post('/login', iniciarSesion);),
+  // y asumiendo que el prefijo del router es '/usuarios' en tu archivo principal de Express (ej. app.use('/usuarios', usuariosRoutes);),
+  // el endpoint completo es '/usuarios/login'.
+  static const String _loginEndpoint = '/usuarios/login'; 
 
   Future<LoginResponse> login(LoginRequest request) async {
     final url = Uri.parse('$_baseUrl$_loginEndpoint');
@@ -41,34 +47,37 @@ class AuthService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseBody = jsonDecode(response.body);
         return LoginResponse.fromJson(responseBody);
-      } else if (response.statusCode == 401) {
-        // --- Manejo específico para 401 Unauthorized (Credenciales incorrectas) ---
-        String errorMessage = 'Cédula o contraseña incorrectas.'; // Mensaje predeterminado
-
-        try {
-          final Map<String, dynamic> errorBody = jsonDecode(response.body);
-          // Prioriza 'message', luego 'error', si no, usa el predeterminado
-          errorMessage = errorBody['message'] ?? errorBody['error'] ?? errorMessage;
-        } catch (e) {
-          // Si el cuerpo no es JSON o no se puede decodificar, usa el mensaje predeterminado.
-          print('No se pudo decodificar el cuerpo del error 401 como JSON. Usando mensaje predeterminado.');
-        }
-        throw Exception(errorMessage); // Lanza la excepción con el mensaje específico
       } else {
-        // --- Manejo para otros códigos de error (400, 500, etc.) ---
-        String errorMessage = 'Error desconocido del servidor.';
+        String errorMessage = 'Error desconocido al iniciar sesión.';
+        String? rolFromError; 
 
         try {
           final Map<String, dynamic> errorBody = jsonDecode(response.body);
-          errorMessage = errorBody['message'] ?? errorBody['error'] ?? 'Error de servidor: ${response.statusCode}';
+          // Tu API devuelve 'error' para credenciales inválidas y 'message' en otros casos
+          errorMessage = errorBody['error'] ?? errorBody['message'] ?? errorMessage;
         } catch (e) {
-          errorMessage = 'Error al procesar la respuesta del servidor (Estatus: ${response.statusCode}).';
+          print('No se pudo decodificar el cuerpo del error como JSON: $e');
         }
-        throw Exception(errorMessage);
+
+        return LoginResponse(
+          success: false,
+          message: errorMessage,
+          rol: rolFromError,
+        );
       }
     } catch (e) {
       print('Excepción capturada en AuthService.login: $e');
-      throw Exception(' ${e.toString()}');
+      String userFriendlyMessage = 'Error de conexión. Asegúrate de que el servidor esté funcionando y que tienes conexión a internet.';
+      if (e.toString().contains('SocketException')) {
+        userFriendlyMessage = 'No se pudo conectar al servidor. Verifica tu conexión o la URL de la API.';
+      } else if (e.toString().contains('Connection refused')) {
+        userFriendlyMessage = 'Conexión rechazada. Asegúrate de que el servidor backend está corriendo.';
+      }
+      return LoginResponse(
+        success: false,
+        message: userFriendlyMessage,
+        rol: null,
+      );
     }
   }
 }

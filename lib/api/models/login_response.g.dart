@@ -10,7 +10,12 @@ LoginResponse _$LoginResponseFromJson(Map<String, dynamic> json) =>
     LoginResponse(
       message: json['message'] as String,
       success: json['success'] as bool,
+      rol: json['rol'] as String?,
     );
 
 Map<String, dynamic> _$LoginResponseToJson(LoginResponse instance) =>
-    <String, dynamic>{'message': instance.message, 'success': instance.success};
+    <String, dynamic>{
+      'message': instance.message,
+      'success': instance.success,
+      'rol': instance.rol,
+    };

@@ -1,14 +1,20 @@
 // lib/layout/screens/login_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint; // Importa debugPrint
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:smged/api/models/login_request.dart';
+import 'package:smged/api/models/login_response.dart';
 import 'package:smged/api/services/auth_service.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/layout/widgets/custom_TextStyles.dart';
-// No necesitas importar HomeScreen aquí, la navegación la maneja routes.dart
+
+// Importa tus pantallas de dashboard para cada rol
+import 'package:smged/layout/screens/admin_dashboard_screen.dart'; // Asegúrate de la ruta correcta
+import 'package:smged/layout/screens/home_screen.dart'; // Asegúrate de la ruta correcta
+import 'package:smged/layout/screens/docente_dashboard_screen.dart'; // Asegúrate de la ruta correcta
 
 class LoginScreen extends StatefulWidget {
-  final VoidCallback onLoginSuccess;
+  // ¡CAMBIO CRUCIAL AQUÍ! onLoginSuccess DEBE ACEPTAR UN String?
+  final Function(String?) onLoginSuccess; 
 
   const LoginScreen({super.key, required this.onLoginSuccess});
 
@@ -24,27 +30,36 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // Función para manejar la navegación a la pantalla adecuada según el rol
+  // Esta función ahora está obsoleto con el enfoque de `home` en main.dart
+  // y se eliminará.
+  /*
+  void _navigateToRoleBasedScreen(String? rol) {
+    // ... (Tu lógica anterior de navegación)
+  }
+  */
+
   Future<void> _login() async {
-    debugPrint('[_LoginScreenState] Iniciando función _login...');
+    debugPrint('[_LoginScreenState] _login() iniciado.');
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
     debugPrint('[_LoginScreenState] Estado de carga y error reseteados.');
 
-    final cedulaUsuario = _cedulaUsuarioController.text;
-    final password = _passwordController.text;
+    final cedulaUsuario = _cedulaUsuarioController.text.trim();
+    final password = _passwordController.text.trim();
 
     if (cedulaUsuario.isEmpty || password.isEmpty) {
       setState(() {
-        _errorMessage = 'Por favor, ingresa cédula y contraseña.';
+        _errorMessage = 'Por favor, ingresa tu cédula y contraseña.';
         _isLoading = false;
       });
       debugPrint('[_LoginScreenState] Campos de login vacíos. Error: $_errorMessage');
       return;
     }
 
-    debugPrint('[_LoginScreenState] Campos de login no vacíos. Cédula: $cedulaUsuario');
+    debugPrint('[_LoginScreenState] Intentando login con Cédula: $cedulaUsuario');
 
     try {
       debugPrint('[_LoginScreenState] Creando LoginRequest y llamando a AuthService.login...');
@@ -52,31 +67,41 @@ class _LoginScreenState extends State<LoginScreen> {
         cedula_usuario: cedulaUsuario,
         password: password,
       );
-      final response = await _authService.login(request);
-      debugPrint('[_LoginScreenState] AuthService.login completado. Respuesta success: ${response.success}');
+
+      final LoginResponse response = await _authService.login(request);
+      debugPrint('[_LoginScreenState] Respuesta de AuthService.login: Success=${response.success}, Rol=${response.rol}, Message=${response.message}');
 
       if (response.success) {
-        debugPrint('[_LoginScreenState] Login exitoso. response.success es TRUE. Llamando a widget.onLoginSuccess().');
-        widget.onLoginSuccess();
-        debugPrint('[_LoginScreenState] widget.onLoginSuccess() llamado. Esperando reconstrucción de MaterialApp...');
+        debugPrint('[_LoginScreenState] Login exitoso. Notificando al padre (MyApp) con el rol: ${response.rol}');
+        // ¡CAMBIO CRUCIAL AQUÍ! Llamamos al callback que `main.dart` nos dio.
+        // `main.dart` se encargará de la navegación.
+        widget.onLoginSuccess(response.rol); 
+        // ¡IMPORTANTE! NO HAYA NAVEGACIÓN DIRECTA AQUÍ DESPUÉS DEL LOGIN.
+        // La navegación la controla `main.dart` a través de la propiedad `home`.
       } else {
         setState(() {
-          _errorMessage = response.message ?? 'Credenciales inválidas o error desconocido.';
+          _errorMessage = response.message;
         });
         debugPrint('[_LoginScreenState] Login fallido. Mensaje: $_errorMessage');
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString().contains('Exception:')
-            ? e.toString().replaceFirst('Exception: ', '')
-            : 'Error de conexión o inesperado.';
-      });
       debugPrint('[_LoginScreenState] Excepción capturada durante el login: $e');
+      setState(() {
+        if (e.toString().contains('SocketException')) {
+          _errorMessage = 'Error de conexión. Asegúrate de que tienes internet o que el servidor está activo.';
+        } else if (e.toString().contains('Connection refused')) {
+          _errorMessage = 'Conexión rechazada. El servidor de la API no está disponible.';
+        } else if (e.toString().contains('Exception:')) {
+          _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        } else {
+          _errorMessage = 'Ocurrió un error inesperado al iniciar sesión. Intenta de nuevo.';
+        }
+      });
     } finally {
       setState(() {
         _isLoading = false;
       });
-      debugPrint('[_LoginScreenState] Finalizado el bloque try-catch-finally de _login. _isLoading es false.');
+      debugPrint('[_LoginScreenState] _login() finalizado. _isLoading es false.');
     }
   }
 

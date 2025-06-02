@@ -1,8 +1,17 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
-import 'package:smged/routes.dart'; // Asegúrate de que esta línea exista y la ruta sea correcta
-import 'package:flutter/foundation.dart' show debugPrint; // Importa debugPrint
+import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:shared_preferences/shared_preferences.dart';
+
+// Importa todas las pantallas que serán la 'home' inicial o dashboards
+import 'package:smged/layout/screens/login_screen.dart';
+import 'package:smged/layout/screens/home_screen.dart'; // Para el rol de Psicólogo
+import 'package:smged/layout/screens/admin_dashboard_screen.dart'; // Para el rol de Administrador
+import 'package:smged/layout/screens/docente_dashboard_screen.dart'; // Para el rol de Docente
+
+// Importa tu archivo de rutas con un alias para evitar conflictos
+import 'package:smged/routes.dart' as app_routes;
 
 void main() {
   runApp(const MyApp());
@@ -17,35 +26,86 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _isLoggedIn = false;
+  String? _userRole;
 
-  void _handleLoginSuccess() {
-    debugPrint('[_MyAppState] _handleLoginSuccess llamado. Cambiando _isLoggedIn a true.');
-    setState(() {
-      _isLoggedIn = true;
-    });
-    debugPrint('[_MyAppState] _isLoggedIn ahora es: $_isLoggedIn');
-    // NO ES NECESARIO NAVEGAR AQUÍ. El cambio de _isLoggedIn
-    // hará que MaterialApp se reconstruya y reevalúe su initialRoute.
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
   }
 
-  void _handleLogout(BuildContext context) {
-    debugPrint('[_MyAppState] _handleLogout llamado. Cambiando _isLoggedIn a false.');
+  Future<void> _checkLoginStatus() async {
+    debugPrint('[_MyAppState] _checkLoginStatus: Iniciando verificación de estado de login...');
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    final role = prefs.getString('user_role');
+
+    if (token != null && token.isNotEmpty && role != null && role.isNotEmpty) {
+      debugPrint('[_MyAppState] _checkLoginStatus: Token y rol encontrados. Estableciendo _isLoggedIn a true, rol: $role');
+      setState(() {
+        _isLoggedIn = true;
+        _userRole = role;
+      });
+    } else {
+      debugPrint('[_MyAppState] _checkLoginStatus: No se encontró token o rol. Estableciendo _isLoggedIn a false.');
+      setState(() {
+        _isLoggedIn = false;
+        _userRole = null;
+      });
+    }
+  }
+
+  Future<void> _handleLoginSuccess(String? rol) async {
+    debugPrint('[_MyAppState] _handleLoginSuccess: Login exitoso, rol recibido: $rol. Guardando rol y actualizando estado.');
+    final prefs = await SharedPreferences.getInstance();
+    if (rol != null) {
+      await prefs.setString('user_role', rol);
+    }
+    setState(() {
+      _isLoggedIn = true;
+      _userRole = rol;
+    });
+    debugPrint('[_MyAppState] _isLoggedIn ahora es: $_isLoggedIn, _userRole: $_userRole');
+  }
+
+  Future<void> _handleLogout() async {
+    debugPrint('[_MyAppState] _handleLogout: Iniciando cierre de sesión. Limpiando SharedPreferences.');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    await prefs.remove('user_role');
     setState(() {
       _isLoggedIn = false;
+      _userRole = null;
     });
-    debugPrint('[_MyAppState] _isLoggedIn ahora es: $_isLoggedIn. Navegando a initialRoute (LoginScreen).');
-    // Esta navegación es correcta para limpiar la pila y asegurar que se vea el LoginScreen.
-    Navigator.of(context).pushReplacementNamed(AppRoutes.initialRoute);
+    debugPrint('[_MyAppState] _isLoggedIn ahora es: $_isLoggedIn, _userRole: $_userRole. Forzando reconstrucción.');
+  }
+
+  Widget _getScreenBasedOnAuthStatus() {
+    if (_isLoggedIn) {
+      switch (_userRole?.toLowerCase()) {
+        case 'administrador':
+          return const AdminDashboardScreen();
+        case 'psicologo':
+          // Pasamos _handleLogout a HomeScreen, que es un VoidCallback
+          return HomeScreen(onLogout: _handleLogout);
+        case 'docente':
+          return const DocenteDashboardScreen();
+        default:
+          debugPrint('[_MyAppState] Rol desconocido: $_userRole. Redirigiendo a LoginScreen por defecto.');
+          // Aquí pasamos _handleLoginSuccess, que acepta un String?
+          return LoginScreen(onLoginSuccess: _handleLoginSuccess);
+      }
+    } else {
+      // Aquí pasamos _handleLoginSuccess a LoginScreen, que acepta un String?
+      return LoginScreen(onLoginSuccess: _handleLoginSuccess);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('[_MyAppState] build() llamado. _isLoggedIn es: $_isLoggedIn');
+    debugPrint('[_MyAppState] build() llamado. _isLoggedIn es: $_isLoggedIn, _userRole es: $_userRole');
 
-    // ¡Importante! Añadir una llave al MaterialApp que cambie según el estado de login.
-    // Esto fuerza a Flutter a reconstruir el MaterialApp y, por lo tanto, reevaluar sus rutas.
     return MaterialApp(
-      key: ValueKey(_isLoggedIn), // La clave cambia si el estado de login cambia
       title: 'SMGED App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -68,17 +128,12 @@ class _MyAppState extends State<MyApp> {
             color: AppColors.primary,
           ),
         ),
-        textSelectionTheme: TextSelectionThemeData(
+        textSelectionTheme: const TextSelectionThemeData(
           cursorColor: AppColors.primary,
         ),
       ),
-      initialRoute: AppRoutes.initialRoute,
-      // Pasa el estado y los callbacks a la función que define tus rutas
-      routes: getApplicationRoutes(
-        _isLoggedIn,
-        _handleLoginSuccess,
-        _handleLogout,
-      ),
+      home: _getScreenBasedOnAuthStatus(),
+      routes: app_routes.getApplicationRoutes(),
     );
   }
 }

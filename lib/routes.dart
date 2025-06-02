@@ -1,44 +1,45 @@
 // lib/routes.dart
 import 'package:flutter/material.dart';
-import 'package:smged/layout/screens/login_screen.dart'; // Asegúrate de que esta ruta sea correcta
-import 'package:smged/layout/screens/home_screen.dart'; // Asegúrate de que esta ruta sea correcta
-import 'package:smged/layout/screens/estudiantes_screen.dart'; // Asegúrate de que esta ruta sea correcta
-import 'package:smged/layout/screens/forms/estudiante_form_screen.dart'; // ¡La ruta a tu formulario de estudiante!
+
+// No necesitas importar LoginScreen o HomeScreen aquí,
+// ya que la lógica principal de autenticación se maneja en main.dart
+// import 'package:smged/layout/screens/login_screen.dart';
+// import 'package:smged/layout/screens/home_screen.dart';
+
+import 'package:smged/layout/screens/estudiantes_screen.dart';
+import 'package:smged/layout/screens/forms/estudiante_form_screen.dart';
 
 /// Una clase que contiene las constantes de las rutas de tu aplicación.
-/// Usar constantes ayuda a prevenir errores tipográficos y facilita refactorizar.
 class AppRoutes {
-  static const String initialRoute = '/'; // Ruta de inicio de la aplicación
-  static const String loginRoute = '/login'; // Ruta para la pantalla de login
-  static const String homeRoute = '/home'; // Ruta para la pantalla principal (home)
-  static const String estudiantesList = '/estudiantes'; // Ruta para la lista de estudiantes
-  static const String estudianteForm = '/estudianteForm'; // Ruta para el formulario de estudiante
+  // initialRoute y loginRoute/homeRoute ya no son relevantes para el flujo principal de auth
+  // static const String initialRoute = '/';
+  // static const String loginRoute = '/login';
+  // static const String homeRoute = '/home';
+
+  static const String estudiantesList =
+      '/estudiantes'; // Ruta para la lista de estudiantes
+  static const String estudianteForm =
+      '/estudianteForm'; // Ruta para el formulario de estudiante
+
+  // Puedes definir aquí otras rutas para tus dashboards si las usas con Navigator.pushNamed
+  // static const String adminDashboardRoute = '/adminDashboard';
+  // static const String docenteDashboardRoute = '/docenteDashboard';
 }
 
-/// Función de nivel superior que devuelve el mapa de todas las rutas de la aplicación.
-/// Recibe el estado de autenticación y los callbacks para que la ruta inicial
-/// pueda decidir qué pantalla mostrar (Login o Home).
-Map<String, WidgetBuilder> getApplicationRoutes(
-  bool isLoggedIn, // Indica si el usuario está logueado
-  VoidCallback onLoginSuccess, // Callback cuando el login es exitoso
-  void Function(BuildContext) onLogout, // Callback para cerrar sesión
-) {
+// Esta función ahora solo devuelve un mapa de rutas para navegación INTERNA.
+// YA NO RECIBE NINGÚN PARÁMETRO DE AUTENTICACIÓN.
+Map<String, WidgetBuilder> getApplicationRoutes() {
+  // <--- ¡Sin parámetros aquí!
   return <String, WidgetBuilder>{
-    // La ruta inicial de la aplicación.
-    // Decide entre LoginScreen o HomeScreen basándose en el estado de isLoggedIn.
-    AppRoutes.initialRoute: (BuildContext context) => isLoggedIn
-        ? HomeScreen(onLogout: () => onLogout(context))
-        : LoginScreen(onLoginSuccess: onLoginSuccess),
+    // La ruta inicial para la decisión de auth se maneja en main.dart (propiedad 'home')
+    // por lo tanto, no se define aquí.
+    AppRoutes.estudiantesList: (BuildContext context) =>
+        const EstudiantesScreen(),
+    AppRoutes.estudianteForm: (BuildContext context) =>
+        const EstudianteFormScreen(),
 
-    // Ruta explícita para la pantalla de estudiantes.
-    AppRoutes.estudiantesList: (BuildContext context) => const EstudiantesScreen(),
-
-    // Ruta explícita para el formulario de estudiante.
-    AppRoutes.estudianteForm: (BuildContext context) => const EstudianteFormScreen(),
-
-    // Opcional: Si necesitaras navegar directamente a login o home desde otro lugar
-    // (aparte del flujo inicial), podrías definirlas aquí también:
-    // AppRoutes.loginRoute: (BuildContext context) => LoginScreen(onLoginSuccess: onLoginSuccess),
-    // AppRoutes.homeRoute: (BuildContext context) => HomeScreen(onLogout: () => onLogout(context)),
+    // Agrega aquí el resto de tus rutas internas.
+    // AppRoutes.adminDashboardRoute: (BuildContext context) => const AdminDashboardScreen(),
+    // AppRoutes.docenteDashboardRoute: (BuildContext context) => const DocenteDashboardScreen(),
   };
 }

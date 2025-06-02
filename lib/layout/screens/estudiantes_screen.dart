@@ -54,6 +54,8 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
     });
     try {
       final fetchedEstudiantes = await _estudiantesService.obtenerTodosLosEstudiantes();
+      // ¡AÑADIR VERIFICACIÓN DE mounted AQUÍ!
+      if (!mounted) return;
       setState(() {
         _estudiantes = fetchedEstudiantes;
         _filteredEstudiantes = fetchedEstudiantes;
@@ -61,29 +63,31 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
         _sortAscending = true;
       });
     } catch (e) {
+      // ¡AÑADIR VERIFICACIÓN DE mounted AQUÍ!
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Error al cargar estudiantes: ${e.toString().replaceFirst('Exception: ', '')}';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      // ¡AÑADIR VERIFICACIÓN DE mounted AQUÍ!
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   void _onSort(int columnIndex, bool ascending) {
-    // Las columnas base para la lógica de ordenación.
-    // Usamos esta lista para mapear el columnIndex a la propiedad correcta del Estudiante.
     final List<String> sortableColumnKeys = [
-      'ID', // Mapea a idEstudiante
-      'Nombres', // Mapea a nombres
-      'Apellidos', // Mapea a apellidos
-      'Cédula', // Mapea a cedula
-      // Puedes añadir 'Discapacidad' aquí si necesitas ordenar por ella
+      'ID',
+      'Nombres',
+      'Apellidos',
+      'Cédula',
     ];
 
     if (columnIndex < 0 || columnIndex >= sortableColumnKeys.length) {
-      return; // Índice de columna fuera de rango
+      return;
     }
 
     final String sortKey = sortableColumnKeys[columnIndex];
@@ -109,18 +113,14 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
           valueA = a.cedula;
           valueB = b.cedula;
           break;
-        // case 'Discapacidad':
-        //   valueA = a.discapacidad?.nombre ?? ''; // Asegúrate de que tu modelo Estudiante tenga una propiedad 'discapacidad' con un 'nombre'
-        //   valueB = b.discapacidad?.nombre ?? '';
-        //   break;
         default:
-          return 0; // No ordenar
+          return 0;
       }
 
       return ascending ? valueA.compareTo(valueB) : valueB.compareTo(valueA);
     });
 
-    _filterEstudiantes(); // Re-aplicar el filtro después de ordenar
+    _filterEstudiantes();
 
     setState(() {
       _sortColumnIndex = columnIndex;
@@ -137,33 +137,29 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
         _filteredEstudiantes = _estudiantes.where((estudiante) {
           final nombreCompleto = '${estudiante.nombres} ${estudiante.apellidos}'.toLowerCase();
           final cedula = estudiante.cedula.toLowerCase();
-          // Puedes añadir otros campos a la búsqueda si lo deseas
-          // final discapacidad = estudiante.discapacidad?.toLowerCase() ?? '';
           return nombreCompleto.contains(query) || cedula.contains(query);
         }).toList();
       }
     });
   }
 
-  // Método para manejar la acción de editar un estudiante
   void _handleEditEstudiante(TableData item) async {
     final estudiante = item as Estudiante;
     debugPrint('Editar estudiante: ${estudiante.nombres} ${estudiante.apellidos} (ID: ${estudiante.idEstudiante})');
 
-    // Navega al formulario, pasando el estudiante a editar
     final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => EstudianteFormScreen(estudianteToEdit: estudiante),
       ),
     );
 
-    // Si el formulario devuelve 'true', recarga la lista de estudiantes
+    // ¡AÑADIR VERIFICACIÓN DE mounted AQUÍ!
+    if (!mounted) return;
     if (result == true) {
       _fetchEstudiantes();
     }
   }
 
-  // Método para manejar la acción de eliminar un estudiante
   void _handleDeleteEstudiante(TableData item) {
     final estudiante = item as Estudiante;
     debugPrint('Eliminar estudiante: ${estudiante.nombres} ${estudiante.apellidos}');
@@ -180,7 +176,7 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) { // Usar dialogContext para el diálogo
         return AlertDialog(
           title: const Text('Confirmar Eliminación'),
           content: Text('¿Estás seguro de que quieres eliminar a ${estudiante.nombres} ${estudiante.apellidos}?'),
@@ -188,21 +184,32 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
             TextButton(
               child: const Text('Cancelar'),
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop(); // Cierra el diálogo
               },
             ),
             TextButton(
               style: TextButton.styleFrom(foregroundColor: AppColors.error),
               child: const Text('Eliminar'),
               onPressed: () async {
-                Navigator.of(context).pop(); // Cierra el diálogo de confirmación
-                ScaffoldMessenger.of(context).showSnackBar(
+                Navigator.of(dialogContext).pop(); // Cierra el diálogo de confirmación inmediatamente
+                
+                // --- INICIO DE LA SECCIÓN CRÍTICA DE LA CORRECCIÓN ---
+                // Se muestra el SnackBar de "Eliminando..." antes de la operación asíncrona
+                ScaffoldMessenger.of(context).showSnackBar( // Usa el context original del widget
                   const SnackBar(content: Text('Eliminando estudiante...'), duration: Duration(seconds: 1)),
                 );
+
                 try {
                   await _estudiantesService.eliminarEstudiante(estudiante.idEstudiante!);
                   debugPrint('Estudiante eliminado con éxito');
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  
+                  // ¡VERIFICACIÓN DE mounted AQUÍ!
+                  if (!mounted) {
+                    debugPrint('[_EstudiantesScreenState] Widget desmontado. No se puede actualizar UI después de eliminar.');
+                    return; // Sale si el widget ya no está montado
+                  }
+
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Oculta el de "Eliminando..."
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Estudiante "${estudiante.nombres} ${estudiante.apellidos}" eliminado exitosamente.'),
@@ -211,21 +218,31 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
                   );
                   _fetchEstudiantes(); // Vuelve a cargar la lista de estudiantes
                 } catch (e) {
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  // ¡VERIFICACIÓN DE mounted AQUÍ!
+                  if (!mounted) {
+                    debugPrint('[_EstudiantesScreenState] Widget desmontado. No se puede actualizar UI después de error al eliminar.');
+                    return; // Sale si el widget ya no está montado
+                  }
+
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Oculta el de "Eliminando..."
                   setState(() {
                     _errorMessage = 'Error al eliminar estudiante: ${e.toString().replaceFirst('Exception: ', '')}';
                   });
-                   ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Error al eliminar estudiante: ${e.toString().replaceFirst('Exception: ', '')}'),
                       backgroundColor: Colors.red,
                     ),
                   );
                 } finally {
-                  setState(() {
-                    _isLoading = false;
-                  });
+                  // ¡VERIFICACIÓN DE mounted AQUÍ!
+                  if (mounted) {
+                    setState(() {
+                      _isLoading = false;
+                    });
+                  }
                 }
+                // --- FIN DE LA SECCIÓN CRÍTICA DE LA CORRECCIÓN ---
               },
             ),
           ],
@@ -321,17 +338,16 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
             onPressed: _fetchEstudiantes,
             tooltip: 'Recargar estudiantes',
           ),
-          // MODIFICACIÓN: Cambia este botón para usar Navigator.push y esperar un resultado
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () async {
-              // Navega al formulario, sin pasar un estudiante (para creación)
               final result = await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => const EstudianteFormScreen(),
                 ),
               );
-              // Si el formulario devuelve 'true' (indicando éxito), recarga la lista
+              // ¡AÑADIR VERIFICACIÓN DE mounted AQUÍ!
+              if (!mounted) return;
               if (result == true) {
                 _fetchEstudiantes();
               }
@@ -343,87 +359,85 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: AppColors.error, fontSize: 18),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                )
-              : Padding(
-                  padding: const EdgeInsets.all(15.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SearchBarWidget(
-                        controller: _searchController,
-                        hintText: 'Buscar estudiante por nombre o cédula...',
-                        onChanged: (query) => _filterEstudiantes(),
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: AppColors.error, fontSize: 18),
+                        textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 15.0),
-                      Expanded(
-                        child: Card(
-                          elevation: 8.0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: 8.0,
-                                  top: 8.0,
-                                  left: 12.0,
-                                  right: 12.0,
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.all(15.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SearchBarWidget(
+                          controller: _searchController,
+                          hintText: 'Buscar estudiante por nombre o cédula...',
+                          onChanged: (query) => _filterEstudiantes(),
+                        ),
+                        const SizedBox(height: 15.0),
+                        Expanded(
+                          child: Card(
+                            elevation: 8.0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.0),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.max,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: 8.0,
+                                    top: 8.0,
+                                    left: 12.0,
+                                    right: 12.0,
+                                  ),
+                                  child: Text(
+                                    'LISTA DE ESTUDIANTES',
+                                    textAlign: TextAlign.left,
+                                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.primary,
+                                        ),
+                                  ),
                                 ),
-                                child: Text(
-                                  'LISTA DE ESTUDIANTES',
-                                  textAlign: TextAlign.left,
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.primary,
-                                      ),
-                                ),
-                              ),
-                              const Divider(),
-                              _filteredEstudiantes.isEmpty
-                                  ? const Expanded(
-                                      child: Center(
-                                        child: Text(
-                                          'No hay estudiantes registrados o no se encontraron resultados.',
-                                          style: TextStyle(fontSize: 16, color: Colors.grey),
-                                          textAlign: TextAlign.center,
+                                const Divider(),
+                                _filteredEstudiantes.isEmpty
+                                    ? const Expanded(
+                                        child: Center(
+                                          child: Text(
+                                            'No hay estudiantes registrados o no se encontraron resultados.',
+                                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      )
+                                    : Expanded(
+                                        child: CustomDataTable<Estudiante>(
+                                          data: _filteredEstudiantes,
+                                          columns: estudianteColumns,
+                                          minWidth: 700,
+                                          actionCallbacks: {
+                                            'info': _handleInfoEstudiante,
+                                            'edit': _handleEditEstudiante,
+                                            'delete': _handleDeleteEstudiante,
+                                          },
+                                          sortColumnIndex: _sortColumnIndex,
+                                          sortAscending: _sortAscending,
                                         ),
                                       ),
-                                    )
-                                  : Expanded(
-                                      child: CustomDataTable<Estudiante>(
-                                        data: _filteredEstudiantes,
-                                        columns: estudianteColumns,
-                                        minWidth: 700,
-                                        actionCallbacks: {
-                                          'info': _handleInfoEstudiante,
-                                          'edit': _handleEditEstudiante, // Ya estaba correcto
-                                          'delete': _handleDeleteEstudiante, // Ya estaba correcto
-                                        },
-                                        sortColumnIndex: _sortColumnIndex,
-                                        sortAscending: _sortAscending,
-                                      ),
-                                    ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-      // Si tienes un FloatingActionButton separado para añadir, asegúrate de que también use Navigator.push
-      // y espere un resultado. Por ahora, el botón "Add" en el AppBar es suficiente.
     );
   }
 }

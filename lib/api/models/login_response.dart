@@ -1,6 +1,6 @@
+// lib/api/models/login_response.dart
 import 'package:json_annotation/json_annotation.dart';
 
-// Importante: La parte que el generador de código creará.
 part 'login_response.g.dart';
 
 /// Clase que representa el cuerpo de la respuesta de la API al intentar un login.
@@ -8,22 +8,16 @@ part 'login_response.g.dart';
 /// que recibes de tu API de Node.js.
 @JsonSerializable() // Anotación para que 'json_serializable' genere el código.
 class LoginResponse {
-  // Asegúrate de que los nombres de estas propiedades (message, success)
-  // coincidan exactamente con los nombres de los campos que tu API de Node.js devuelve
-  // en el JSON de respuesta.
   final String message;
   final bool success;
-  // Si tu API devuelve un token u otros datos en la respuesta de login,
-  // puedes añadirlos aquí, por ejemplo:
-  // final String? token;
-  // final User? user; // Si tienes un modelo User
+  // ¡Añade esta línea para incluir el rol en la respuesta!
+  final String? rol; // El '?' indica que puede ser nulo, si tu API lo permite así.
 
   /// Constructor para crear una instancia de LoginResponse.
   LoginResponse({
     required this.message,
     required this.success,
-    // this.token, // Si lo incluyes arriba, añádelo aquí también
-    // this.user,
+    this.rol, // ¡Añádelo también al constructor!
   });
 
   /// Un constructor de fábrica que permite crear una instancia de `LoginResponse`

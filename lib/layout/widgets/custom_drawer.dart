@@ -15,9 +15,12 @@ class CustomDrawer extends StatelessWidget {
 
   // Función para mostrar el diálogo de confirmación antes de cerrar sesión
   void _confirmLogout(BuildContext context) {
+    // Almacenamos el context del Drawer antes de que se cierre
+    final drawerContext = context;
+
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) { // Usamos dialogContext para evitar conflicto de nombre
+      builder: (BuildContext dialogContext) { // Usamos dialogContext para el diálogo
         return AlertDialog(
           title: const Text('Cerrar Sesión'),
           content: const Text('¿Estás seguro de que quieres cerrar tu sesión?'),
@@ -25,14 +28,18 @@ class CustomDrawer extends StatelessWidget {
             TextButton(
               child: const Text('Cancelar'),
               onPressed: () {
-                Navigator.of(dialogContext).pop(); // Cierra el diálogo
+                Navigator.of(dialogContext).pop(); // Cierra solo el diálogo
               },
             ),
             TextButton(
               child: const Text('Sí, cerrar sesión'),
               onPressed: () {
-                Navigator.of(dialogContext).pop(); // Cierra el diálogo
-                onLogout(); // Llama al callback de logout que viene del HomeScreen (MyApp)
+                // Primero cierra el diálogo de confirmación
+                Navigator.of(dialogContext).pop(); 
+                // Asegúrate de que el Drawer esté cerrado antes de llamar a onLogout.
+                // En este escenario, el Drawer ya fue cerrado por el onTap del ListTile.
+                // Llamamos directamente al onLogout que desencadena la lógica en MyApp.
+                onLogout(); 
               },
             ),
           ],
@@ -76,58 +83,64 @@ class CustomDrawer extends StatelessWidget {
             leading: const Icon(Icons.dashboard),
             title: const Text('Dashboard'),
             onTap: () {
-              Navigator.pop(context);
+              Navigator.pop(context); // Cierra el Drawer
+              // En este caso, el "Dashboard" es la Home o el Dashboard específico del rol.
+              // Si el usuario ya está en su Dashboard, simplemente cierra el Drawer.
+              // Si no, podrías usar Navigator.pushReplacement o Navigator.push si quieres añadirlo al stack.
             },
           ),
           ListTile(
             leading: const Icon(Icons.school),
             title: const Text('Estudiantes'),
             onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/estudiantes');
+              Navigator.pop(context); // Cierra el Drawer
+              Navigator.pushNamed(context, '/estudiantes'); // Navega usando rutas nombradas
             },
           ),
           ListTile(
             leading: const Icon(Icons.event),
             title: const Text('Citas'),
             onTap: () {
-              Navigator.pop(context);
-              // Navigator.pushNamed(context, '/citas');
+              Navigator.pop(context); // Cierra el Drawer
+              // Navigator.pushNamed(context, '/citas'); // Descomentar cuando la ruta esté definida
             },
           ),
           ListTile(
             leading: const Icon(Icons.history),
             title: const Text('Historial Médico'),
             onTap: () {
-              Navigator.pop(context);
-              // Navigator.pushNamed(context, '/historialMedico');
+              Navigator.pop(context); // Cierra el Drawer
+              // Navigator.pushNamed(context, '/historialMedico'); // Descomentar cuando la ruta esté definida
             },
           ),
           ListTile(
             leading: const Icon(Icons.report),
             title: const Text('Reportes'),
             onTap: () {
-              Navigator.pop(context);
-              // Navigator.pushNamed(context, '/reportes');
+              Navigator.pop(context); // Cierra el Drawer
+              // Navigator.pushNamed(context, '/reportes'); // Descomentar cuando la ruta esté definida
             },
           ),
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Configuración'),
             onTap: () {
-              Navigator.pop(context);
-              // Navigator.pushNamed(context, '/configuracion');
+              Navigator.pop(context); // Cierra el Drawer
+              // Navigator.pushNamed(context, '/configuracion'); // Descomentar cuando la ruta esté definida
             },
           ),
           const Divider(),
 
-          // Opción de Cerrar Sesión (únicamente aquí)
+          // Opción de Cerrar Sesión
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
             onTap: () {
-              Navigator.pop(context); // Cierra el Drawer
-              _confirmLogout(context); // Llama a la confirmación de logout
+              // Primero, cierra el Drawer inmediatamente.
+              // Esto asegura que la navegación principal no se vea obstaculizada por un Drawer abierto.
+              Navigator.pop(context); 
+              // Luego, muestra el diálogo de confirmación.
+              _confirmLogout(context); 
             },
           ),
         ],
