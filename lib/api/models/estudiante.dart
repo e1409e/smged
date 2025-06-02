@@ -31,8 +31,8 @@ class Estudiante implements TableData {
     this.direccion,
     this.observaciones,
     this.seguimiento,
-    this.discapacidad, // Puede ser nulo si la API no lo envía al crear o si no lo necesitas siempre
-    this.idDiscapacidad, // ¡NUEVO: Este puede ser nulo en fromJson si no siempre viene, pero es requerido para el POST/PUT!
+    this.discapacidad, 
+    this.idDiscapacidad, 
     this.fechaRegistro,
     this.fechaActualizacion,
   });

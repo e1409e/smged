@@ -64,47 +64,31 @@ class EstudiantesService {
   }
 
   // Crear un nuevo estudiante
+// Crear un nuevo estudiante
   Future<Estudiante> crearEstudiante(Estudiante estudiante) async {
     try {
       final url = Uri.parse('$_baseUrl'); // Asume que este es el endpoint para crear
+      debugPrint('[EstudiantesService] Intentando POST a: $url');
+      debugPrint('[EstudiantesService] Cuerpo de la petición: ${json.encode(estudiante.toJson())}');
+
       final response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: json.encode(estudiante.toJson()), // Convertimos el objeto Estudiante a JSON
+        body: json.encode(estudiante.toJson()), 
       );
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        // La API devuelve solo el ID del estudiante creado (un int)
-        final int? nuevoId = int.tryParse(response.body);
+      debugPrint('[EstudiantesService] Respuesta de la API (Status: ${response.statusCode}): ${response.body}');
 
-        if (nuevoId != null) {
-          // Si obtenemos un ID, reconstruimos un objeto Estudiante localmente
-          // con los datos que enviamos y el ID asignado por la base de datos.
-          return Estudiante(
-            idEstudiante: nuevoId,
-            nombres: estudiante.nombres,
-            apellidos: estudiante.apellidos,
-            cedula: estudiante.cedula,
-            fechaNacimiento: estudiante.fechaNacimiento,
-            correo: estudiante.correo,
-            telefono: estudiante.telefono,
-            direccion: estudiante.direccion,
-            observaciones: estudiante.observaciones,
-            seguimiento: estudiante.seguimiento,
-            idDiscapacidad: estudiante.idDiscapacidad,
-            // Los campos 'discapacidad', 'fechaRegistro', 'fechaActualizacion'
-            // los dejas nulos o como los inicializaste originalmente,
-            // ya que la API no los devuelve en esta respuesta simple.
-            discapacidad: null,
-            fechaRegistro: null,
-            fechaActualizacion: null,
-          );
-        } else {
-          // Si la respuesta no es un int, lo consideramos un error inesperado de formato
-          throw Exception('La API devolvió un formato de ID inesperado: "${response.body}"');
-        }
+      if (response.statusCode == 201 || response.statusCode == 200) {
+       
+        // La API devuelve el objeto Estudiante completo, decodifícalo como JSON
+        final Map<String, dynamic> responseBody = json.decode(utf8.decode(response.bodyBytes));
+        
+        // Ahora, usa el factory Estudiante.fromJson para construir el objeto
+        // que ya sabe cómo extraer id_estudiante, nombres, etc.
+        return Estudiante.fromJson(responseBody);
       } else {
         // Manejo de errores basado en el código de estado HTTP
         String errorMessage = 'Error desconocido al crear estudiante.';
@@ -121,6 +105,8 @@ class EstudiantesService {
         }
         throw Exception('Error al crear estudiante (Código: ${response.statusCode}): $errorMessage');
       }
+    } on http.ClientException catch (e) {
+      throw Exception('Error de conexión: Verifica tu conexión a internet o la URL de la API. Detalles: ${e.message}');
     } catch (e) {
       // Re-lanza la excepción para que pueda ser capturada en la UI
       throw Exception('Ha ocurrido un error inesperado al crear estudiante: ${e.toString()}');
