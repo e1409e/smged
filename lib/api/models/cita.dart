@@ -48,6 +48,27 @@ class Cita implements TableData {
   }
   // --- FIN Helpers para DateTime para Cita ---
 
+  // *******************************************************************
+  // ** ESTE ES EL MÉTODO 'copyWith' QUE DEBES AÑADIR A TU MODELO CITA **
+  // *******************************************************************
+  Cita copyWith({
+    int? id_citas,
+    int? id_estudiante,
+    DateTime? fecha_cita,
+    String? motivo_cita,
+    int? pendiente,
+    String? nombre_estudiante, // También incluye el nuevo campo aquí
+  }) {
+    return Cita(
+      id_citas: id_citas ?? this.id_citas,
+      id_estudiante: id_estudiante ?? this.id_estudiante,
+      fecha_cita: fecha_cita ?? this.fecha_cita,
+      motivo_cita: motivo_cita ?? this.motivo_cita,
+      pendiente: pendiente ?? this.pendiente,
+      nombre_estudiante: nombre_estudiante ?? this.nombre_estudiante, // Añade esto
+    );
+  }
+
   @override
   int get id => id_citas ?? 0; // Implementación de TableData
 
@@ -64,15 +85,15 @@ class Cita implements TableData {
 
       switch (columnLabel) {
         case 'ID':
-          cells.add(DataCell(Text(id_citas.toString())));
+          cells.add(DataCell(Text(id_citas?.toString() ?? 'N/A'))); // Usa ?. para seguridad
           break;
-        case 'Estudiante': // ¡NUEVA COLUMNA PARA LA TABLA!
+        case 'Estudiante':
           cells.add(DataCell(Text(nombre_estudiante ?? 'N/A')));
           break;
         case 'Fecha Cita':
           cells.add(
             DataCell(Text(fecha_cita.toLocal().toString().split(' ')[0])),
-          ); // Formato solo fecha
+          );
           break;
         case 'Motivo':
           cells.add(DataCell(Text(motivo_cita ?? 'N/A')));
@@ -125,28 +146,25 @@ class Cita implements TableData {
                         actionCallbacks['delete']?.call(this);
                       },
                     ),
-                    // ¡NUEVO BOTÓN! Para marcar como realizada
                     const SizedBox(width: 4),
                     IconButton(
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       icon: Icon(
-                        Icons.task_alt, // Icono para "realizado"
+                        Icons.task_alt,
                         size: 25,
                         color: pendiente == 1
-                            ? Colors.grey
-                            : AppColors
-                                  .primary, // Deshabilitar/cambiar color si ya está realizada
+                            ? AppColors.info // Un color diferente para indicar que se puede marcar
+                            : Colors.grey, // Deshabilitar/gris si ya está realizada
                       ),
                       tooltip: pendiente == 1
-                          ? 'Cita ya realizada'
-                          : 'Marcar como realizada',
+                          ? 'Marcar como realizada'
+                          : 'Cita ya realizada',
                       onPressed: pendiente == 1
-                          ? null
-                          : () {
-                              // Deshabilitar si ya está pendiente=0
+                          ? () {
                               actionCallbacks['mark_realized']?.call(this);
-                            },
+                            }
+                          : null, // Deshabilitar si ya está pendiente=0
                     ),
                   ],
                 ),
