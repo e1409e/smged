@@ -10,7 +10,11 @@ class CitasUtils {
 
     // Formatear la fecha de la cita
     String fechaCitaFormateada =
-        '${cita.fecha_cita.day}/${cita.fecha_cita.month}/${cita.fecha_cita.year} ${cita.fecha_cita.hour.toString().padLeft(2, '0')}:${cita.fecha_cita.minute.toString().padLeft(2, '0')}';
+        '${cita.fecha_cita.day}/${cita.fecha_cita.month}/${cita.fecha_cita.year}';
+
+    //Codigo para agregar la hora    
+    //${cita.fecha_cita.hour.toString().padLeft(2, '0')}:${cita.fecha_cita.minute.toString().padLeft(2, '0')}
+
 
     // Determinar el estado de la cita
     String estadoCita = cita.pendiente == 1 ? 'Pendiente' : 'Realizada';
@@ -25,20 +29,23 @@ class CitasUtils {
             child: ListBody(
               children: <Widget>[
                 // Campos de la cita
-                Text('ID Cita: ${cita.id_citas ?? 'N/A'}'),
+                Text('Código: ${cita.id_citas ?? 'N/A'}'),
                 Text('Estudiante: ${cita.nombre_estudiante ?? 'N/A'}'),
-                Text('ID Estudiante: ${cita.id_estudiante ?? 'N/A'}'),
-                Text('Fecha y Hora: $fechaCitaFormateada'),
+                //Text('ID Estudiante: ${cita.id_estudiante ?? 'N/A'}'),
+                Text('Fecha: $fechaCitaFormateada'),
                 Text('Motivo: ${cita.motivo_cita ?? 'N/A'}'),
+                Text(''),
                 Row(
                   children: [
                     const Text('Estado: '),
                     Chip(
                       label: Text(
                         estadoCita,
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: estadoColor, fontWeight: FontWeight.bold),
                       ),
-                      backgroundColor: estadoColor,
+                      backgroundColor: Colors.grey[200],
+                      padding: const EdgeInsets.all(1),
+
                     ),
                   ],
                 ),

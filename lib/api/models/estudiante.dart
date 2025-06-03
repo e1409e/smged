@@ -31,8 +31,8 @@ class Estudiante implements TableData {
     this.direccion,
     this.observaciones,
     this.seguimiento,
-    this.discapacidad, 
-    this.idDiscapacidad, 
+    this.discapacidad,
+    this.idDiscapacidad,
     this.fechaRegistro,
     this.fechaActualizacion,
   });
@@ -70,30 +70,22 @@ class Estudiante implements TableData {
 
   Map<String, dynamic> toJson() {
     return {
-      // 'id_estudiante': idEstudiante, // No incluyas idEstudiante para operaciones POST (crear)
-      // Si tu API espera el ID para las operaciones PUT (actualizar), puedes incluirlo condicionalmente:
       if (idEstudiante != null) 'id_estudiante': idEstudiante,
-      
       'nombres': nombres,
       'apellidos': apellidos,
       'cedula': cedula,
-      // Asegúrate de que la API espere 'fecha_nacimiento' en este formato
-      'fecha_nacimiento': fechaNacimiento?.toIso8601String().split('T')[0], // Formato 'YYYY-MM-DD'
+      'fecha_nacimiento': fechaNacimiento?.toIso8601String().split('T')[0],
       'correo': correo,
       'telefono': telefono,
       'direccion': direccion,
       'observaciones': observaciones,
       'seguimiento': seguimiento,
-      // 'discapacidad': discapacidad, // No envíes el NOMBRE de la discapacidad en el payload de guardado
-      'discapacidad_id': idDiscapacidad, // ¡ENVÍA EL ID!
-      
-      // 'fecha_registro': fechaRegistro?.toIso8601String(), // La API suele manejar esto automáticamente en POST
-      // 'fecha_actualizacion': fechaActualizacion?.toIso8601String(), // La API suele manejar esto automáticamente en POST
+      'discapacidad_id': idDiscapacidad,
     };
   }
 
   @override
-  int get id => idEstudiante ?? 0; // Si idEstudiante es nulo, devuelve 0 o un valor por defecto.
+  int get id => idEstudiante ?? 0;
 
   @override
   List<DataCell> getCells(
@@ -104,7 +96,22 @@ class Estudiante implements TableData {
     List<DataCell> cells = [];
 
     for (var column in currentColumns) {
-      final columnLabel = (column.label as Text).data;
+      String? columnLabel;
+      // --- INICIO DEL CAMBIO ---
+      if (column.label is Text) {
+        // Si el label es directamente un Text (caso original)
+        columnLabel = (column.label as Text).data;
+      } else if (column.label is Center && (column.label as Center).child is Text) {
+        // Si el label es un Center y su hijo es un Text (caso actual de 'Acciones'/'Info')
+        columnLabel = ((column.label as Center).child as Text).data;
+      }
+      // --- FIN DEL CAMBIO ---
+
+      // Asegúrate de que columnLabel no sea nulo antes de usarlo en el switch
+      if (columnLabel == null) {
+        cells.add(const DataCell(Text('N/A')));
+        continue;
+      }
 
       switch (columnLabel) {
         case 'ID':
@@ -119,14 +126,14 @@ class Estudiante implements TableData {
         case 'Cédula':
           cells.add(DataCell(Text(cedula)));
           break;
-        case 'Discapacidad': // Asegúrate de que tu CustomDataTable tiene esta columna
-          cells.add(DataCell(Text(discapacidad ?? 'N/A'))); // Muestra el nombre
+        case 'Discapacidad':
+          cells.add(DataCell(Text(discapacidad ?? 'N/A')));
           break;
         case 'Info':
           cells.add(
             DataCell(
               Align(
-                alignment: Alignment.centerLeft,
+                alignment: Alignment.center,
                 child: IconButton(
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -144,7 +151,7 @@ class Estudiante implements TableData {
           cells.add(
             DataCell(
               Align(
-                alignment: Alignment.centerLeft,
+                alignment: Alignment.center,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

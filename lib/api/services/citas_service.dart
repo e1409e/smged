@@ -56,19 +56,13 @@ class CitasService {
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final Map<String, dynamic> responseBody = json.decode(utf8.decode(response.bodyBytes));
-        
-        // --- INICIO DE LA CORRECCIÓN PARA CREAR CITA ---
-        // Tu API devuelve { "id_citas": 10, "message": "Cita creada correctamente" }
-        // Necesitamos crear una Cita con el ID retornado.
-        // Asume que la cita que recibiste para crear es la base, y solo actualizas el ID.
         if (responseBody.containsKey('id_citas')) {
-          // Si el ID se devuelve, lo asignamos a la cita original para tener el objeto completo
+          
           return cita.copyWith(id_citas: responseBody['id_citas'] as int);
         } else {
           // Si por alguna razón el ID no viene, podrías lanzar un error o devolver la cita original.
           throw Exception('La API no devolvió el id_citas al crear la cita.');
         }
-        // --- FIN DE LA CORRECCIÓN PARA CREAR CITA ---
 
       } else {
         final errorBody = json.decode(utf8.decode(response.bodyBytes));
@@ -134,7 +128,6 @@ class CitasService {
             throw Exception('Error al decodificar la respuesta. La API devolvió un formato inesperado: "$responseBodyString". Error: $e');
           }
         }
-        // --- FIN DE LA LÓGICA CLARA PARA ACTUALIZAR CITA ---
 
       } else {
         final errorBody = json.decode(utf8.decode(response.bodyBytes));

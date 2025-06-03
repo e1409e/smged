@@ -317,7 +317,7 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                                   });
                                 }
                               },
-                              dropdownColor: Theme.of(context).cardColor, // O el color que desees
+                              dropdownColor: Theme.of(context).cardColor, 
                               icon: const Icon(Icons.arrow_drop_down),
                               elevation: 8,
                               style: Theme.of(context).textTheme.titleMedium,
@@ -331,9 +331,7 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                                 labelText: 'Cédula',
                                 border: const OutlineInputBorder(),
                                 prefixIcon: const Icon(Icons.credit_card),
-                                // Aquí ya no es necesario prefixText, el dropdown lo maneja
-                                // prefixText: _cedulaPrefix, // Ya no se usa aquí
-                                // prefixStyle: const TextStyle(fontWeight: FontWeight.bold),
+                                
                               ),
                               keyboardType: TextInputType.number, // Solo números después del prefijo
                               inputFormatters: [
@@ -426,7 +424,7 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                       ),
                       const SizedBox(height: 16.0),
                       Text(
-                        'Datos Adicionales',
+                        'Datos Medicos',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: AppColors.primary,

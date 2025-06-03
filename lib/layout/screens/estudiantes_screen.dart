@@ -54,7 +54,7 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
     });
     try {
       final fetchedEstudiantes = await _estudiantesService.obtenerTodosLosEstudiantes();
-      // ¡AÑADIR VERIFICACIÓN DE mounted AQUÍ!
+      // ¡VERIFICACIÓN de mounted AQUÍ!
       if (!mounted) return;
       setState(() {
         _estudiantes = fetchedEstudiantes;
@@ -193,7 +193,7 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
               onPressed: () async {
                 Navigator.of(dialogContext).pop(); // Cierra el diálogo de confirmación inmediatamente
                 
-                // --- INICIO DE LA SECCIÓN CRÍTICA DE LA CORRECCIÓN ---
+                
                 // Se muestra el SnackBar de "Eliminando..." antes de la operación asíncrona
                 ScaffoldMessenger.of(context).showSnackBar( // Usa el context original del widget
                   const SnackBar(content: Text('Eliminando estudiante...'), duration: Duration(seconds: 1)),
@@ -267,20 +267,24 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
     DataColumn2 actionColumn;
 
     if (_isActionMode) {
-      actionColumn = DataColumn2(
-        label: const Text('Acciones'),
-        fixedWidth: defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS
-            ? 130
-            : 130,
-      );
-    } else {
-      actionColumn = DataColumn2(
-        label: const Text('Info'),
-        fixedWidth: defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS
-            ? 100
-            : 100,
-      );
-    }
+  actionColumn = DataColumn2(
+    label: const Center( // <--- Nuevo: Envuelve el Text en Center
+      child: Text('Acciones'),
+    ),
+    fixedWidth: defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS
+        ? 130
+        : 130,
+  );
+} else {
+  actionColumn = DataColumn2(
+    label: const Center( // <--- Nuevo: Envuelve el Text en Center
+      child: Text('Info'),
+    ),
+    fixedWidth: defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS
+        ? 130
+        : 130,
+  );
+}
 
     if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
       estudianteColumns = [
@@ -324,7 +328,7 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Estudiantes'),
+        title: const Text('ESTUDIANTES', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.textTitle,
         actions: [
