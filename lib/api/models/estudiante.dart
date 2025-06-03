@@ -1,8 +1,8 @@
-// lib/api/models/estudiante.dart
 import 'package:flutter/material.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:smged/layout/widgets/custom_data_table.dart';
-import 'package:smged/layout/widgets/custom_colors.dart';
+import 'package:smged/layout/widgets/custom_colors.dart'; // Asegúrate de que esta importación sea correcta si la usas
+import 'package:intl/intl.dart'; // Necesario para DateFormat
 
 class Estudiante implements TableData {
   final int? idEstudiante;
@@ -12,13 +12,22 @@ class Estudiante implements TableData {
   final DateTime? fechaNacimiento;
   final String? correo;
   final String? telefono;
+  final String? otroTelefono; // Nuevo campo
   final String? direccion;
   final String? observaciones;
   final String? seguimiento;
-  final String? discapacidad; // Campo para el NOMBRE de la discapacidad (para visualización)
-  final int? idDiscapacidad; // ¡NUEVO CAMPO! Para el ID numérico de la discapacidad (para guardar/editar)
+  final String? discapacidad; // Nombre de la discapacidad (desde 'discapacidad')
+  final int? idDiscapacidad; // ID numérico de la discapacidad (desde 'discapacidad_id')
+  final int? idCarrera;      // Nuevo campo (desde 'id_carrera')
+  final bool? poseeConapdis; // Nuevo campo, necesita conversión int a bool (desde 'posee_conapdis')
+
+  // Campos para visualización, no para enviar al backend (provienen de JOINs)
+  final String? nombreRepre;    // Nuevo campo (desde 'nombre_repre')
+  final String? nombreFacultad; // Nuevo campo (desde 'facultad')
+  final String? siglasFacultad; // Nuevo campo (desde 'siglas')
+  final String? nombreCarrera;  // Nuevo campo (desde 'carrera')
   final DateTime? fechaRegistro;
-  final DateTime? fechaActualizacion;
+  final DateTime? fechaActualizacion; // No presente en tu JSON actual, pero lo mantengo si es necesario
 
   Estudiante({
     this.idEstudiante,
@@ -28,64 +37,110 @@ class Estudiante implements TableData {
     this.fechaNacimiento,
     this.correo,
     this.telefono,
+    this.otroTelefono,
     this.direccion,
     this.observaciones,
     this.seguimiento,
-    this.discapacidad,
-    this.idDiscapacidad,
+    this.discapacidad, // Nombre de la discapacidad (desde 'discapacidad')
+    this.idDiscapacidad, // ID numérico de la discapacidad (desde 'discapacidad_id')
+    this.idCarrera,
+    this.poseeConapdis,
+    this.nombreRepre,
+    this.nombreFacultad,
+    this.siglasFacultad,
+    this.nombreCarrera,
     this.fechaRegistro,
     this.fechaActualizacion,
   });
 
   factory Estudiante.fromJson(Map<String, dynamic> json) {
     try {
+      // Función auxiliar para convertir int (0/1) a bool
+      bool? _parseBoolFromInt(dynamic value) {
+        if (value == null) return null;
+        if (value is int) {
+          return value == 1; // 1 es true, 0 es false.
+        }
+        // Si por alguna razón viene como bool directamente (ej. durante testing), lo maneja
+        if (value is bool) {
+          return value;
+        }
+        return null; // O podrías lanzar un error si el tipo es inesperado
+      }
+
       return Estudiante(
         idEstudiante: json['id_estudiante'] as int?,
         nombres: json['nombres'] as String,
         apellidos: json['apellidos'] as String,
         cedula: json['cedula'] as String,
         fechaNacimiento: json['fecha_nacimiento'] != null
-            ? DateTime.parse(json['fecha_nacimiento'])
+            ? DateTime.parse(json['fecha_nacimiento'] as String) // Asegúrate de que es String
             : null,
         correo: json['correo'] as String?,
         telefono: json['telefono'] as String?,
+        otroTelefono: json['otro_telefono'] as String?, // Mapeo del nuevo campo
         direccion: json['direccion'] as String?,
         observaciones: json['observaciones'] as String?,
         seguimiento: json['seguimiento'] as String?,
-        discapacidad: json['discapacidad'] as String?, // Nombre de la discapacidad
-        idDiscapacidad: json['discapacidad_id'] as int?, // ¡NUEVO: ID de la discapacidad desde la API!
+        discapacidad: json['discapacidad'] as String?,
+        idDiscapacidad: json['discapacidad_id'] as int?,
+        idCarrera: json['id_carrera'] as int?, // Mapeo del nuevo campo
+        poseeConapdis: _parseBoolFromInt(json['posee_conapdis']), // Usa la función de conversión
+        nombreRepre: json['nombre_repre'] as String?, // Mapeo del nuevo campo
+        nombreFacultad: json['facultad'] as String?, // Mapeo del nuevo campo
+        siglasFacultad: json['siglas'] as String?, // Mapeo del nuevo campo
+        nombreCarrera: json['carrera'] as String?, // Mapeo del nuevo campo
         fechaRegistro: json['fecha_registro'] != null
-            ? DateTime.parse(json['fecha_registro'])
+            ? DateTime.parse(json['fecha_registro'] as String)
             : null,
         fechaActualizacion: json['fecha_actualizacion'] != null
-            ? DateTime.parse(json['fecha_actualizacion'])
+            ? DateTime.parse(json['fecha_actualizacion'] as String)
             : null,
       );
     } catch (e) {
       debugPrint('Error al parsear Estudiante desde JSON: $e');
       debugPrint('JSON problemático: $json');
-      rethrow;
+      rethrow; // Re-lanza el error para que la aplicación lo maneje
     }
   }
 
   Map<String, dynamic> toJson() {
+    // Función auxiliar para convertir bool a int (0/1)
+    int? _boolToInt(bool? value) {
+      if (value == null) return null;
+      return value ? 1 : 0; // true es 1, false es 0
+    }
+
     return {
       if (idEstudiante != null) 'id_estudiante': idEstudiante,
       'nombres': nombres,
       'apellidos': apellidos,
       'cedula': cedula,
-      'fecha_nacimiento': fechaNacimiento?.toIso8601String().split('T')[0],
+      'fecha_nacimiento': fechaNacimiento?.toIso8601String().split('T').first, // Solo la fecha YYYY-MM-DD
       'correo': correo,
       'telefono': telefono,
+      'otro_telefono': otroTelefono, // Incluir si se envía al backend
       'direccion': direccion,
       'observaciones': observaciones,
       'seguimiento': seguimiento,
       'discapacidad_id': idDiscapacidad,
+      'id_carrera': idCarrera, // Incluir si se envía al backend
+      'posee_conapdis': _boolToInt(poseeConapdis), // Usar la función de conversión
+      // Los campos como 'discapacidad', 'nombreRepre', 'nombreFacultad', etc.
+      // no se incluyen aquí porque son datos para visualización que el backend
+      // devuelve de JOINs y no se envían para crear/actualizar un estudiante.
     };
   }
 
   @override
-  int get id => idEstudiante ?? 0;
+  int get id {
+    // Mantengo la solución del ID temporal. Puedes usar 0 si estás seguro
+    // de que 0 nunca será un ID válido en tu base de datos y que no tendrás
+    // múltiples estudiantes nulos en la misma tabla.
+    return idEstudiante ?? (Object.hash(this, nombres, cedula).abs() + 1) * -1;
+    // Si prefieres la versión simple que tenías antes:
+    // return idEstudiante ?? 0;
+  }
 
   @override
   List<DataCell> getCells(
@@ -97,15 +152,12 @@ class Estudiante implements TableData {
 
     for (var column in currentColumns) {
       String? columnLabel;
-      // --- INICIO DEL CAMBIO ---
+      // Revisa si el label es Text directamente o está dentro de Center
       if (column.label is Text) {
-        // Si el label es directamente un Text (caso original)
         columnLabel = (column.label as Text).data;
       } else if (column.label is Center && (column.label as Center).child is Text) {
-        // Si el label es un Center y su hijo es un Text (caso actual de 'Acciones'/'Info')
         columnLabel = ((column.label as Center).child as Text).data;
       }
-      // --- FIN DEL CAMBIO ---
 
       // Asegúrate de que columnLabel no sea nulo antes de usarlo en el switch
       if (columnLabel == null) {
@@ -115,7 +167,7 @@ class Estudiante implements TableData {
 
       switch (columnLabel) {
         case 'ID':
-          cells.add(DataCell(Text(idEstudiante.toString())));
+          cells.add(DataCell(Text(idEstudiante?.toString() ?? 'N/A')));
           break;
         case 'Nombres':
           cells.add(DataCell(Text(nombres)));
@@ -126,8 +178,48 @@ class Estudiante implements TableData {
         case 'Cédula':
           cells.add(DataCell(Text(cedula)));
           break;
+        case 'Fecha Nacimiento':
+          cells.add(DataCell(Text(fechaNacimiento != null
+              ? DateFormat('dd/MM/yyyy').format(fechaNacimiento!)
+              : 'N/A')));
+          break;
+        case 'Teléfono':
+          cells.add(DataCell(Text(telefono ?? 'N/A')));
+          break;
+        case 'Otro Teléfono': // Nuevo campo en la tabla si lo deseas
+          cells.add(DataCell(Text(otroTelefono ?? 'N/A')));
+          break;
+        case 'Correo':
+          cells.add(DataCell(Text(correo ?? 'N/A')));
+          break;
+        case 'Carrera': // Ahora usa 'nombreCarrera' del JOIN
+          cells.add(DataCell(Text(nombreCarrera ?? 'N/A')));
+          break;
         case 'Discapacidad':
           cells.add(DataCell(Text(discapacidad ?? 'N/A')));
+          break;
+        case 'Posee CONAPDIS': // Nuevo campo en la tabla
+          cells.add(DataCell(Text(poseeConapdis == true ? 'Sí' : (poseeConapdis == false ? 'No' : 'N/A'))));
+          break;
+        case 'Observaciones':
+          cells.add(DataCell(Text(observaciones ?? 'N/A')));
+          break;
+        case 'Seguimiento':
+          cells.add(DataCell(Text(seguimiento ?? 'N/A')));
+          break;
+        case 'Representante': // Nuevo campo en la tabla
+          cells.add(DataCell(Text(nombreRepre ?? 'N/A')));
+          break;
+        case 'Facultad': // Nuevo campo en la tabla
+          cells.add(DataCell(Text(nombreFacultad ?? 'N/A')));
+          break;
+        case 'Siglas Facultad': // Nuevo campo en la tabla
+          cells.add(DataCell(Text(siglasFacultad ?? 'N/A')));
+          break;
+        case 'Fecha Registro': // Nuevo campo en la tabla
+          cells.add(DataCell(Text(fechaRegistro != null
+              ? DateFormat('dd/MM/yyyy HH:mm').format(fechaRegistro!)
+              : 'N/A')));
           break;
         case 'Info':
           cells.add(

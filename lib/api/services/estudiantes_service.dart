@@ -38,6 +38,7 @@ class EstudiantesService {
       _handleResponse(response); // Llama al manejador centralizado de respuestas
 
       // Si la respuesta es exitosa, decodifica y mapea a objetos Estudiante
+      // El Estudiante.fromJson ya está adaptado para los nuevos campos
       final List<dynamic> estudiantesJson = json.decode(utf8.decode(response.bodyBytes));
       return estudiantesJson.map((json) => Estudiante.fromJson(json)).toList();
     } on http.ClientException catch (e) {
@@ -55,7 +56,8 @@ class EstudiantesService {
       final response = await http.get(Uri.parse('$_baseUrl/$id'));
       _handleResponse(response); // Maneja la respuesta
 
-      return Estudiante.fromJson(json.decode(response.body));
+      // El Estudiante.fromJson ya está adaptado para los nuevos campos
+      return Estudiante.fromJson(json.decode(utf8.decode(response.bodyBytes)));
     } on http.ClientException catch (e) {
       throw Exception('Error de conexión o de red al obtener estudiante: ${e.message}');
     } catch (e) {
@@ -64,105 +66,111 @@ class EstudiantesService {
   }
 
   // Crear un nuevo estudiante
-// Crear un nuevo estudiante
   Future<Estudiante> crearEstudiante(Estudiante estudiante) async {
     try {
       final url = Uri.parse('$_baseUrl'); // Asume que este es el endpoint para crear
       debugPrint('[EstudiantesService] Intentando POST a: $url');
-      debugPrint('[EstudiantesService] Cuerpo de la petición: ${json.encode(estudiante.toJson())}');
+      
+      // estudiante.toJson() ahora incluye 'id_carrera', 'posee_conapdis' (como 0/1), 'otro_telefono', 'direccion'
+      // y excluye los campos derivados.
+      final String requestBody = json.encode(estudiante.toJson());
+      debugPrint('[EstudiantesService] Cuerpo de la petición: $requestBody');
 
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: json.encode(estudiante.toJson()), 
+        headers: _headers, // Usa _headers directamente
+        body: requestBody, 
       );
 
-      debugPrint('[EstudiantesService] Respuesta de la API (Status: ${response.statusCode}): ${response.body}');
+      debugPrint('[EstudiantesService] Respuesta de la API (Status: ${response.statusCode}): ${utf8.decode(response.bodyBytes)}');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-       
-        // La API devuelve el objeto Estudiante completo, decodifícalo como JSON
+        // La API devuelve el objeto Estudiante completo con los campos derivados,
+        // por lo que usamos Estudiante.fromJson para construirlo.
         final Map<String, dynamic> responseBody = json.decode(utf8.decode(response.bodyBytes));
-        
-        // Ahora, usa el factory Estudiante.fromJson para construir el objeto
-        // que ya sabe cómo extraer id_estudiante, nombres, etc.
         return Estudiante.fromJson(responseBody);
       } else {
-        // Manejo de errores basado en el código de estado HTTP
         String errorMessage = 'Error desconocido al crear estudiante.';
         try {
-          final errorBody = json.decode(response.body);
-          if (errorBody is Map && errorBody.containsKey('message')) {
-            errorMessage = errorBody['message'];
+          final errorBody = json.decode(utf8.decode(response.bodyBytes));
+          if (errorBody is Map && errorBody.containsKey('errors')) {
+            // Si hay errores de validación, puedes querer mostrar el array de errores
+            errorMessage = 'Errores de validación: ${errorBody['errors'].map((e) => e['msg']).join(', ')}';
+          } else if (errorBody is Map && errorBody.containsKey('error')) {
+            errorMessage = errorBody['error'];
           } else {
-            errorMessage = response.body; // Si no hay 'message', usa todo el cuerpo de la respuesta
+            errorMessage = utf8.decode(response.bodyBytes);
           }
         } catch (e) {
-          // Si el cuerpo de la respuesta no es un JSON, usamos el cuerpo tal cual
-          errorMessage = response.body;
+          errorMessage = utf8.decode(response.bodyBytes);
         }
         throw Exception('Error al crear estudiante (Código: ${response.statusCode}): $errorMessage');
       }
     } on http.ClientException catch (e) {
       throw Exception('Error de conexión: Verifica tu conexión a internet o la URL de la API. Detalles: ${e.message}');
     } catch (e) {
-      // Re-lanza la excepción para que pueda ser capturada en la UI
       throw Exception('Ha ocurrido un error inesperado al crear estudiante: ${e.toString()}');
     }
   }
 
-// Método para actualizar un estudiante
+  // Método para actualizar un estudiante
   Future<Estudiante> actualizarEstudiante(Estudiante estudiante) async {
     if (estudiante.idEstudiante == null) {
       throw Exception('El ID del estudiante es necesario para actualizar.');
     }
     try {
       final url = Uri.parse('$_baseUrl/${estudiante.idEstudiante}');
-      debugPrint('Enviando PUT a: $url');
-      debugPrint('Cuerpo de la solicitud: ${json.encode(estudiante.toJson())}');
+      debugPrint('[EstudiantesService] Enviando PUT a: $url');
+      
+      // estudiante.toJson() ya está adaptado para enviar los campos correctos.
+      final String requestBody = json.encode(estudiante.toJson());
+      debugPrint('[EstudiantesService] Cuerpo de la solicitud: $requestBody');
 
       final response = await http.put(
         url,
         headers: _headers,
-        body: json.encode(estudiante.toJson()),
+        body: requestBody,
       );
 
-      debugPrint('Código de estado de la API al actualizar: ${response.statusCode}');
-      debugPrint('Cuerpo de la respuesta de la API al actualizar: ${response.body}');
+      debugPrint('[EstudiantesService] Código de estado de la API al actualizar: ${response.statusCode}');
+      debugPrint('[EstudiantesService] Cuerpo de la respuesta de la API al actualizar: ${utf8.decode(response.bodyBytes)}');
 
       if (response.statusCode == 200) {
         // La API devuelve un JSON simple: {"editar_estudiante": true}
+        // Basado en la modificación anterior, si devuelve true, significa éxito.
+        // Ahora, queremos devolver el objeto Estudiante con los datos actualizados,
+        // incluyendo los campos derivados (facultad, carrera, etc.) para que el UI pueda refrescarse.
+        // Para esto, podemos hacer una nueva llamada GET o construir el objeto completo
+        // asumiendo que los datos en 'estudiante' (el parámetro) son los correctos.
+        // La opción más robusta y que asegura la coherencia con la DB es hacer un GET.
         try {
-          final Map<String, dynamic> responseData = json.decode(response.body);
+          final Map<String, dynamic> responseData = json.decode(utf8.decode(response.bodyBytes));
           final bool? editarEstudianteExitoso = responseData['editar_estudiante'] as bool?;
 
           if (editarEstudianteExitoso == true) {
-            // Si la API confirma el éxito, retornamos el mismo objeto 'estudiante'
-            // que recibimos como parámetro, ya que este contiene los datos actualizados.
-            return estudiante;
+            // Opción 1 (Recomendado): Hacer un GET para obtener el estudiante completo y actualizado
+            // Esto asegura que cualquier campo generado por la DB (ej. fecha_actualizacion)
+            // o campos derivados (facultad, carrera) estén actualizados.
+            return await obtenerEstudiantePorId(estudiante.idEstudiante!);
           } else {
-            // Si "editar_estudiante" es false o nulo, es un error lógico de la API
             throw Exception('La API indicó que la actualización del estudiante no fue exitosa.');
           }
         } catch (e) {
-          // Esto capturará errores si response.body no es un JSON válido,
-          // o si el campo 'editar_estudiante' no es un booleano, etc.
           throw Exception('Error al procesar la respuesta de la API al actualizar: ${e.toString()}');
         }
       } else {
-        // Manejo de errores basado en el código de estado HTTP (no 200)
         String errorMessage = 'Error desconocido al actualizar estudiante.';
         try {
-          final errorBody = json.decode(response.body);
-          if (errorBody is Map && errorBody.containsKey('message')) {
-            errorMessage = errorBody['message'];
+          final errorBody = json.decode(utf8.decode(response.bodyBytes));
+          if (errorBody is Map && errorBody.containsKey('errors')) {
+            errorMessage = 'Errores de validación: ${errorBody['errors'].map((e) => e['msg']).join(', ')}';
+          } else if (errorBody is Map && errorBody.containsKey('error')) {
+            errorMessage = errorBody['error'];
           } else {
-            errorMessage = response.body;
+            errorMessage = utf8.decode(response.bodyBytes);
           }
         } catch (e) {
-          errorMessage = response.body;
+          errorMessage = utf8.decode(response.bodyBytes);
         }
         throw Exception('Error al actualizar estudiante (Código: ${response.statusCode}): $errorMessage');
       }
@@ -197,16 +205,16 @@ class EstudiantesService {
       // La solicitud fue exitosa (códigos 2xx)
       return; // No hay errores, se procede con el procesamiento de datos
     } else if (response.statusCode == 404) {
-      throw Exception('Recurso no encontrado. URL: ${response.request?.url ?? "N/A"}. Mensaje del servidor: ${response.body}');
+      throw Exception('Recurso no encontrado. URL: ${response.request?.url ?? "N/A"}. Mensaje del servidor: ${utf8.decode(response.bodyBytes)}');
     } else if (response.statusCode >= 400 && response.statusCode < 500) {
       // Errores del lado del cliente (4xx)
-      throw Exception('Error de la aplicación (código ${response.statusCode}). Mensaje del servidor: ${response.body}');
+      throw Exception('Error de la aplicación (código ${response.statusCode}). Mensaje del servidor: ${utf8.decode(response.bodyBytes)}');
     } else if (response.statusCode >= 500 && response.statusCode < 600) {
       // Errores del lado del servidor (5xx)
-      throw Exception('Error del servidor (código ${response.statusCode}). Mensaje del servidor: ${response.body}');
+      throw Exception('Error del servidor (código ${response.statusCode}). Mensaje del servidor: ${utf8.decode(response.bodyBytes)}');
     } else {
       // Otros códigos de estado HTTP no esperados
-      throw Exception('Error desconocido (código ${response.statusCode}). Mensaje del servidor: ${response.body}');
+      throw Exception('Error desconocido (código ${response.statusCode}). Mensaje del servidor: ${utf8.decode(response.bodyBytes)}');
     }
   }
 }
