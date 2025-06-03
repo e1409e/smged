@@ -22,12 +22,12 @@ class CitaFormScreen extends StatefulWidget {
 class _CitaFormScreenState extends State<CitaFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _motivoCitaController = TextEditingController(); // Cambiado de _descripcionController
-  DateTime? _fechaCita; // Solo fecha
+  final TextEditingController _motivoCitaController = TextEditingController();
+  DateTime? _fechaCita;
 
   List<Estudiante> _estudiantes = [];
   Estudiante? _selectedEstudiante;
-  int? _selectedPendiente; // Mapeado a 'pendiente' del modelo
+  int? _selectedPendiente;
 
   final EstudiantesService _estudiantesService = EstudiantesService();
   final CitasService _citasService = CitasService();
@@ -41,7 +41,6 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
     {'label': 'Cita Realizada', 'value': 0},
   ];
 
-
   @override
   void initState() {
     super.initState();
@@ -49,45 +48,68 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
 
     if (widget.citaToEdit != null) {
       final cita = widget.citaToEdit!;
-      _motivoCitaController.text = cita.motivo_cita ?? ''; // Usa motivo_cita
-      _fechaCita = cita.fecha_cita; // Asigna la fecha
-      _selectedPendiente = cita.pendiente; // Asigna el valor de pendiente
-      // La selección del estudiante se maneja en _setInitialEstudianteSelection()
+      _motivoCitaController.text = cita.motivo_cita ?? '';
+      _fechaCita = cita.fecha_cita;
+      _selectedPendiente = cita.pendiente;
+      // La selección del estudiante se maneja en _setInitialEstudianteSelection(),
+      // que se llama después de que _estudiantes se carga.
+    } else {
+      // Establecer un valor predeterminado para _selectedPendiente si es una cita nueva
+      _selectedPendiente = 1; // Por ejemplo, 'Pendiente' por defecto
     }
   }
 
-Future<void> _fetchEstudiantes() async {
+  @override
+  void dispose() {
+    _motivoCitaController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchEstudiantes() async {
+    // [CAMBIO]: Iniciar _isLoadingEstudiantes y _estudiantesError dentro de setState
     setState(() {
       _isLoadingEstudiantes = true;
       _estudiantesError = null;
     });
     try {
-      // ¡CAMBIO AQUÍ!
-      final fetchedEstudiantes = await _estudiantesService.obtenerTodosLosEstudiantes(); // <-- Mismo nombre que en el servicio
+      final fetchedEstudiantes = await _estudiantesService.obtenerTodosLosEstudiantes();
+      
+      // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
+      // Si el widget ya no está montado, sal de la función para evitar llamar a setState en un State desmontado.
+      if (!mounted) return; 
+
       setState(() {
         _estudiantes = fetchedEstudiantes;
         _setInitialEstudianteSelection();
       });
     } catch (e) {
+      // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
+      if (!mounted) return;
+
       setState(() {
         _estudiantesError = 'Error al cargar estudiantes: ${e.toString().replaceFirst('Exception: ', '')}';
       });
     } finally {
-      setState(() {
-        _isLoadingEstudiantes = false;
-      });
+      // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
+      // Asegúrate de que el widget sigue montado antes de actualizar el estado final.
+      if (mounted) {
+        setState(() {
+          _isLoadingEstudiantes = false;
+        });
+      }
     }
   }
 
   void _setInitialEstudianteSelection() {
-    if (widget.citaToEdit != null && widget.citaToEdit!.id_estudiante != null) { // Usa id_estudiante
+    if (widget.citaToEdit != null && widget.citaToEdit!.id_estudiante != null) {
       final initialEstudiante = _estudiantes.firstWhereOrNull(
-            (e) => e.idEstudiante == widget.citaToEdit!.id_estudiante, // Compara con id_estudiante
+        (e) => e.idEstudiante == widget.citaToEdit!.id_estudiante,
       );
       if (initialEstudiante != null) {
-        setState(() {
-          _selectedEstudiante = initialEstudiante;
-        });
+        // No necesitas setState aquí porque esta función es llamada dentro de un setState
+        // o inmediatamente después de uno en _fetchEstudiantes().
+        // Si la llamaras de forma independiente, sí necesitarías setState.
+        _selectedEstudiante = initialEstudiante;
       }
     }
   }
@@ -97,67 +119,74 @@ Future<void> _fetchEstudiantes() async {
       return;
     }
 
+    // Validación de campos obligatorios
+    if (_fechaCita == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, selecciona la fecha de la cita.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedPendiente == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, selecciona el estado de la cita (Pendiente/Realizada).'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedEstudiante == null || _selectedEstudiante!.idEstudiante == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, selecciona un estudiante.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Muestra un indicador de carga
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Guardando cita...'), duration: Duration(seconds: 1)),
+      SnackBar(
+        content: Text(widget.citaToEdit == null ? 'Creando cita...' : 'Actualizando cita...'),
+        duration: const Duration(seconds: 2), // Duración más larga para visibilidad
+        backgroundColor: AppColors.info,
+      ),
     );
 
     try {
-      final String? motivoCita = _motivoCitaController.text.isNotEmpty ? _motivoCitaController.text : null; // Usa motivo_cita
-      final int? idEstudiante = _selectedEstudiante?.idEstudiante;
-
-      if (_fechaCita == null) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor, selecciona la fecha de la cita.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      if (_selectedPendiente == null) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor, selecciona el estado de la cita (Pendiente/Realizada).'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      if (idEstudiante == null) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor, selecciona un estudiante.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
+      final String? motivoCita = _motivoCitaController.text.isNotEmpty ? _motivoCitaController.text : null;
+      final int? idEstudiante = _selectedEstudiante!.idEstudiante; // Ya validado que no es null
 
       final bool isEditing = widget.citaToEdit != null;
-      final int? currentCitaId = widget.citaToEdit?.id_citas; // Usa id_citas
+      final int? currentCitaId = widget.citaToEdit?.id_citas;
 
       final Cita citaPayload = Cita(
         id_citas: currentCitaId,
-        motivo_cita: motivoCita, // Usa motivo_cita
-        fecha_cita: _fechaCita!, // Solo se envía la fecha
-        pendiente: _selectedPendiente!, // Usa pendiente
-        id_estudiante: idEstudiante, // Usa id_estudiante
+        motivo_cita: motivoCita,
+        fecha_cita: _fechaCita!,
+        pendiente: _selectedPendiente!,
+        id_estudiante: idEstudiante!, // Ya validado que no es null
       );
 
-      Cita? savedCita;
-
       if (isEditing) {
-        savedCita = await _citasService.actualizarCita(citaPayload);
+        await _citasService.actualizarCita(citaPayload);
       } else {
-        savedCita = await _citasService.crearCita(citaPayload);
+        await _citasService.crearCita(citaPayload);
       }
 
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
+      if (!mounted) {
+        debugPrint('[_CitaFormScreenState] Widget desmontado. No se puede actualizar UI después de guardar.');
+        return; // Salir si el widget ya no está montado
+      }
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Oculta el SnackBar de "Guardando..."
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Cita ${isEditing ? 'actualizada' : 'guardada'} exitosamente.'),
@@ -165,29 +194,30 @@ Future<void> _fetchEstudiantes() async {
         ),
       );
 
+      // Regresa a la pantalla anterior indicando éxito
       Navigator.of(context).pop(true);
     } catch (e) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
+      if (!mounted) {
+        debugPrint('[_CitaFormScreenState] Widget desmontado. No se puede actualizar UI después de error al guardar.');
+        return; // Salir si el widget ya no está montado
+      }
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Oculta cualquier SnackBar anterior
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al ${widget.citaToEdit != null ? 'actualizar' : 'guardar'} cita: ${e.toString().replaceFirst('Exception: ', '')}'),
           backgroundColor: Colors.red,
         ),
       );
-      debugPrint('Error al guardar/actualizar cita: $e');
+      debugPrint('Error al guardar/actualizar cita: $e'); // Para depuración
     }
-  }
-
-  @override
-  void dispose() {
-    _motivoCitaController.dispose(); // Usa _motivoCitaController
-    super.dispose();
   }
 
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       debugPrint('Formulario de cita validado y listo para guardar/actualizar.');
-      debugPrint('Motivo Cita: ${_motivoCitaController.text}'); // Usa motivo_cita
+      debugPrint('Motivo Cita: ${_motivoCitaController.text}');
       debugPrint('Fecha Cita: $_fechaCita');
       debugPrint('Estado Pendiente: $_selectedPendiente');
       debugPrint('Estudiante ID: ${_selectedEstudiante?.idEstudiante}');
@@ -208,7 +238,7 @@ Future<void> _fetchEstudiantes() async {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.citaToEdit == null ? 'Registrar Cita' : 'Editar Cita'), // Título dinámico
+        title: Text(widget.citaToEdit == null ? 'Registrar Cita' : 'Editar Cita'),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.textTitle,
       ),
@@ -240,27 +270,33 @@ Future<void> _fetchEstudiantes() async {
                       ),
                       const SizedBox(height: 20.0),
                       TextFormField(
-                        controller: _motivoCitaController, // Usa _motivoCitaController
+                        controller: _motivoCitaController,
                         decoration: const InputDecoration(
-                          labelText: 'Motivo de la Cita', // Cambiado de 'Descripción'
+                          labelText: 'Motivo de la Cita',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.description),
                         ),
                         maxLines: 3,
-                        validator: (value) {
-                          // No se requiere validador si el campo es opcional
-                          return null;
-                        },
+                        // [CAMBIO]: Removido validador si el campo puede ser opcional
+                        // validator: (value) {
+                        //   if (value == null || value.isEmpty) {
+                        //     return 'Por favor, ingresa el motivo de la cita.';
+                        //   }
+                        //   return null;
+                        // },
                       ),
                       const SizedBox(height: 16.0),
                       DatePickerFormField(
                         labelText: 'Fecha de la Cita',
                         initialDate: _fechaCita,
-                        firstDate: DateTime(2000), // Fecha mínima
-                        lastDate: DateTime(2100), // Fecha máxima
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
                         prefixIcon: Icons.calendar_today,
                         helpText: 'Seleccionar Fecha de la Cita',
                         onChanged: (DateTime? newDate) {
+                          // [CAMBIO]: No es necesario verificar 'mounted' aquí
+                          // porque onChanged se llama directamente desde un widget
+                          // que está visible en el árbol de widgets.
                           setState(() {
                             _fechaCita = newDate;
                           });
@@ -273,11 +309,11 @@ Future<void> _fetchEstudiantes() async {
                         },
                       ),
                       const SizedBox(height: 16.0),
-                      DropdownButtonFormField<int>( // Cambiado a int para 'pendiente'
+                      DropdownButtonFormField<int>(
                         decoration: const InputDecoration(
-                          labelText: 'Estado (Pendiente/Realizada)', // Nuevo label
+                          labelText: 'Estado (Pendiente/Realizada)',
                           border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.check_circle_outline), // Icono más acorde
+                          prefixIcon: Icon(Icons.check_circle_outline),
                         ),
                         value: _selectedPendiente,
                         hint: const Text('Selecciona el estado de la cita'),
@@ -289,6 +325,9 @@ Future<void> _fetchEstudiantes() async {
                           );
                         }).toList(),
                         onChanged: (int? newValue) {
+                          // [CAMBIO]: No es necesario verificar 'mounted' aquí
+                          // porque onChanged se llama directamente desde un widget
+                          // que está visible en el árbol de widgets.
                           setState(() {
                             _selectedPendiente = newValue;
                           });
@@ -334,6 +373,9 @@ Future<void> _fetchEstudiantes() async {
                                     );
                                   }).toList(),
                                   onChanged: (Estudiante? newValue) {
+                                    // [CAMBIO]: No es necesario verificar 'mounted' aquí
+                                    // porque onChanged se llama directamente desde un widget
+                                    // que está visible en el árbol de widgets.
                                     setState(() {
                                       _selectedEstudiante = newValue;
                                     });
@@ -349,7 +391,7 @@ Future<void> _fetchEstudiantes() async {
                       ElevatedButton.icon(
                         onPressed: _submitForm,
                         icon: const Icon(Icons.save),
-                        label: Text(widget.citaToEdit == null ? 'Guardar Cita' : 'Actualizar Cita'), // Texto del botón dinámico
+                        label: Text(widget.citaToEdit == null ? 'Guardar Cita' : 'Actualizar Cita'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: AppColors.textTitle,

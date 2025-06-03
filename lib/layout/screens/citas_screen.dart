@@ -9,7 +9,8 @@ import 'package:smged/api/services/citas_service.dart'; // Importa el servicio C
 import 'package:smged/layout/widgets/custom_data_table.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/layout/widgets/search_bar_widget.dart';
-import 'package:smged/layout/screens/forms/cita_form_screen.dart'; // ¡IMPORTANTE! Importa el formulario de citas
+import 'package:smged/layout/screens/forms/cita_form_screen.dart';
+import 'package:smged/layout/utils/citas_utils.dart';
 
 class CitasScreen extends StatefulWidget {
   const CitasScreen({super.key});
