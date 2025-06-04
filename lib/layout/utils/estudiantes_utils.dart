@@ -1,31 +1,25 @@
 // lib/layout/utils/estudiantes_utils.dart
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Importar para formateo de fechas más robusto
-import 'package:smged/api/models/estudiante.dart'; // Asegúrate de importar tu modelo Estudiante
-import 'package:smged/layout/widgets/custom_colors.dart'; // Para usar AppColors
+import 'package:intl/intl.dart';
+import 'package:smged/api/models/estudiante.dart';
+import 'package:smged/layout/widgets/custom_colors.dart';
+import 'package:smged/layout/reports/estudiantes_report.dart'; // ¡NUEVA IMPORTACIÓN!
 
 class EstudiantesUtils {
   static void showEstudianteInfoModal(BuildContext context, dynamic item) {
-    // Es crucial castear el item a Estudiante para acceder a sus propiedades.
     final estudiante = item as Estudiante;
 
-    // Formateador de fechas
     final DateFormat formatter = DateFormat('dd/MM/yyyy');
-    final DateFormat dateTimeFormatter = DateFormat(
-      'dd/MM/yyyy HH:mm',
-    ); // Para fecha y hora de registro
+    final DateFormat dateTimeFormatter = DateFormat('dd/MM/yyyy HH:mm');
 
     String fechaNacimientoFormateada = estudiante.fechaNacimiento != null
         ? formatter.format(estudiante.fechaNacimiento!)
         : 'N/A';
 
     String fechaRegistroFormateada = estudiante.fechaRegistro != null
-        ? dateTimeFormatter.format(
-            estudiante.fechaRegistro!,
-          ) // Usar el formateador de fecha y hora
+        ? dateTimeFormatter.format(estudiante.fechaRegistro!)
         : 'N/A';
 
-    // Para el estado de CONAPDIS
     String conapdisEstado = estudiante.poseeConapdis == true
         ? 'Sí'
         : (estudiante.poseeConapdis == false ? 'No' : 'N/A');
@@ -41,15 +35,15 @@ class EstudiantesUtils {
             alignment: Alignment.topCenter,
             child: const Text(
               'Información Detallada del Estudiante',
-              
               style: TextStyle(fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center
+              textAlign: TextAlign.center,
             ),
           ),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
-                // --- SECCIÓN DE INFORMACIÓN PERSONAL ---
+                // ... (tu código existente para los campos del modal) ...
+
                 _buildInfoRow(
                   'Código del Estudiante:',
                   estudiante.idEstudiante?.toString() ?? 'N/A',
@@ -69,30 +63,28 @@ class EstudiantesUtils {
                 _buildInfoRow(
                   'Otro Teléfono:',
                   estudiante.otroTelefono ?? 'N/A',
-                ), // Nuevo
+                ),
                 _buildMultilineInfo(
                   'Dirección:',
                   estudiante.direccion ?? 'N/A',
-                ), // Mejorado para dirección
-                const Divider(), // Separador para legibilidad
-                // --- SECCIÓN DE INFORMACIÓN ACADÉMICA Y DE SALUD ---
+                ),
+                const Divider(),
                 _buildInfoRow(
                   'Discapacidad:',
                   estudiante.discapacidad ?? 'N/A',
-                ), // Usar el nombre de la discapacidad
+                ),
                 _buildInfoRow(
                   'Carrera:',
                   estudiante.nombreCarrera ?? 'N/A',
-                ), // Nuevo
+                ),
                 _buildInfoRow(
                   'Facultad:',
                   '${estudiante.nombreFacultad ?? 'N/A'} (${estudiante.siglasFacultad ?? 'N/A'})',
-                ), // Nuevo
+                ),
                 _buildInfoRow(
                   'Representante:',
                   estudiante.nombreRepre ?? 'N/A',
-                ), // Nuevo
-                // Mostrar "Posee CONAPDIS" con un Chip similar al de Citas
+                ),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4.0),
                   child: Row(
@@ -116,8 +108,6 @@ class EstudiantesUtils {
                   ),
                 ),
                 const Divider(),
-
-                // --- SECCIÓN DE OBSERVACIONES Y SEGUIMIENTO ---
                 _buildMultilineInfo(
                   'Observaciones:',
                   estudiante.observaciones ?? 'N/A',
@@ -127,13 +117,56 @@ class EstudiantesUtils {
                   estudiante.seguimiento ?? 'N/A',
                 ),
                 const Divider(),
-
-                // --- SECCIÓN DE FECHAS DE SISTEMA ---
                 _buildInfoRow('Fecha de Registro:', fechaRegistroFormateada),
-                // Fecha de Actualización no está en tu JSON de ejemplo, pero si lo tuvieras:
-                // _buildInfoRow('Fecha de Actualización:', estudiante.fechaActualizacion != null
-                //     ? dateTimeFormatter.format(estudiante.fechaActualizacion!)
-                //     : 'N/A'),
+
+                // ! INICIO DEL CAMBIO: Botón "Descargar en PDF"
+                const SizedBox(height: 20), // Espacio antes del botón
+                Align(
+                  alignment: Alignment.center,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.of(dialogContext).pop(); // Cierra el modal primero
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Generando PDF del estudiante...')),
+                      );
+                      try {
+                        String filename = 'reporte_${estudiante.nombres}_${estudiante.apellidos}.pdf'
+                            .toLowerCase()
+                            .replaceAll(' ', '_'); // Nombre de archivo limpio
+                        await EstudiantesReport.generateEstudiantesReport(
+                          estudiantesToReport: [estudiante], // ¡Solo este estudiante!
+                          showPreview: true, // Puedes cambiar a false si quieres que solo descargue
+                          saveToFile: false, // Puedes cambiar a true si quieres que solo descargue
+                          shareFile: false, // Puedes cambiar a true si quieres la opción de compartir
+                          customFilename: filename, // Nombre de archivo personalizado
+                        );
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('PDF del estudiante generado con éxito.')),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error al generar PDF: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        print('Error al generar PDF del estudiante: $e'); // Para depuración
+                      }
+                    },
+                    icon: const Icon(Icons.download, color: Colors.white),
+                    label: const Text('Descargar en PDF', style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary, // O el color que prefieras
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                // ! FIN DEL CAMBIO
               ],
             ),
           ),
@@ -150,7 +183,7 @@ class EstudiantesUtils {
     );
   }
 
-  // Helper para construir filas de información clave-valor
+  // Helpers sin cambios
   static Widget _buildInfoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -168,7 +201,6 @@ class EstudiantesUtils {
     );
   }
 
-  // Helper para construir bloques de información con posible salto de línea
   static Widget _buildMultilineInfo(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),

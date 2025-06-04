@@ -9,6 +9,7 @@ import 'package:smged/api/models/estudiante.dart'; // Importa el modelo de Estud
 import 'package:smged/api/services/citas_service.dart'; // Importa el servicio de Citas
 import 'package:smged/api/services/estudiantes_service.dart'; // Importa el servicio de Estudiantes
 import 'package:collection/collection.dart'; // Para firstWhereOrNull
+import 'package:smged/layout/widgets/custom_dropdown_button.dart'; //widget de dropdown con buscador
 
 class CitaFormScreen extends StatefulWidget {
   final Cita? citaToEdit;
@@ -72,11 +73,12 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
       _estudiantesError = null;
     });
     try {
-      final fetchedEstudiantes = await _estudiantesService.obtenerTodosLosEstudiantes();
-      
+      final fetchedEstudiantes = await _estudiantesService
+          .obtenerTodosLosEstudiantes();
+
       // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
       // Si el widget ya no está montado, sal de la función para evitar llamar a setState en un State desmontado.
-      if (!mounted) return; 
+      if (!mounted) return;
 
       setState(() {
         _estudiantes = fetchedEstudiantes;
@@ -87,7 +89,8 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
       if (!mounted) return;
 
       setState(() {
-        _estudiantesError = 'Error al cargar estudiantes: ${e.toString().replaceFirst('Exception: ', '')}';
+        _estudiantesError =
+            'Error al cargar estudiantes: ${e.toString().replaceFirst('Exception: ', '')}';
       });
     } finally {
       // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
@@ -133,14 +136,17 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
     if (_selectedPendiente == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Por favor, selecciona el estado de la cita (Pendiente/Realizada).'),
+          content: Text(
+            'Por favor, selecciona el estado de la cita (Pendiente/Realizada).',
+          ),
           backgroundColor: Colors.orange,
         ),
       );
       return;
     }
 
-    if (_selectedEstudiante == null || _selectedEstudiante!.idEstudiante == null) {
+    if (_selectedEstudiante == null ||
+        _selectedEstudiante!.idEstudiante == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor, selecciona un estudiante.'),
@@ -153,15 +159,24 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
     // Muestra un indicador de carga
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(widget.citaToEdit == null ? 'Creando cita...' : 'Actualizando cita...'),
-        duration: const Duration(seconds: 2), // Duración más larga para visibilidad
+        content: Text(
+          widget.citaToEdit == null
+              ? 'Creando cita...'
+              : 'Actualizando cita...',
+        ),
+        duration: const Duration(
+          seconds: 2,
+        ), // Duración más larga para visibilidad
         backgroundColor: AppColors.info,
       ),
     );
 
     try {
-      final String? motivoCita = _motivoCitaController.text.isNotEmpty ? _motivoCitaController.text : null;
-      final int? idEstudiante = _selectedEstudiante!.idEstudiante; // Ya validado que no es null
+      final String? motivoCita = _motivoCitaController.text.isNotEmpty
+          ? _motivoCitaController.text
+          : null;
+      final int? idEstudiante =
+          _selectedEstudiante!.idEstudiante; // Ya validado que no es null
 
       final bool isEditing = widget.citaToEdit != null;
       final int? currentCitaId = widget.citaToEdit?.id_citas;
@@ -182,14 +197,20 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
 
       // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
       if (!mounted) {
-        debugPrint('[_CitaFormScreenState] Widget desmontado. No se puede actualizar UI después de guardar.');
+        debugPrint(
+          '[_CitaFormScreenState] Widget desmontado. No se puede actualizar UI después de guardar.',
+        );
         return; // Salir si el widget ya no está montado
       }
 
-      ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Oculta el SnackBar de "Guardando..."
+      ScaffoldMessenger.of(
+        context,
+      ).hideCurrentSnackBar(); // Oculta el SnackBar de "Guardando..."
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Cita ${isEditing ? 'actualizada' : 'guardada'} exitosamente.'),
+          content: Text(
+            'Cita ${isEditing ? 'actualizada' : 'guardada'} exitosamente.',
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -199,14 +220,20 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
     } catch (e) {
       // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
       if (!mounted) {
-        debugPrint('[_CitaFormScreenState] Widget desmontado. No se puede actualizar UI después de error al guardar.');
+        debugPrint(
+          '[_CitaFormScreenState] Widget desmontado. No se puede actualizar UI después de error al guardar.',
+        );
         return; // Salir si el widget ya no está montado
       }
 
-      ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Oculta cualquier SnackBar anterior
+      ScaffoldMessenger.of(
+        context,
+      ).hideCurrentSnackBar(); // Oculta cualquier SnackBar anterior
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error al ${widget.citaToEdit != null ? 'actualizar' : 'guardar'} cita: ${e.toString().replaceFirst('Exception: ', '')}'),
+          content: Text(
+            'Error al ${widget.citaToEdit != null ? 'actualizar' : 'guardar'} cita: ${e.toString().replaceFirst('Exception: ', '')}',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -216,12 +243,16 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
 
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
-      debugPrint('Formulario de cita validado y listo para guardar/actualizar.');
+      debugPrint(
+        'Formulario de cita validado y listo para guardar/actualizar.',
+      );
       debugPrint('Motivo Cita: ${_motivoCitaController.text}');
       debugPrint('Fecha Cita: $_fechaCita');
       debugPrint('Estado Pendiente: $_selectedPendiente');
       debugPrint('Estudiante ID: ${_selectedEstudiante?.idEstudiante}');
-      debugPrint('Estudiante Nombre: ${_selectedEstudiante?.nombres} ${_selectedEstudiante?.apellidos}');
+      debugPrint(
+        'Estudiante Nombre: ${_selectedEstudiante?.nombres} ${_selectedEstudiante?.apellidos}',
+      );
 
       _saveCita();
     }
@@ -229,7 +260,8 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+    final isDesktop =
+        defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux ||
         defaultTargetPlatform == TargetPlatform.fuchsia;
@@ -238,7 +270,9 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.citaToEdit == null ? 'Registrar Cita' : 'Editar Cita'),
+        title: Text(
+          widget.citaToEdit == null ? 'Registrar Cita' : 'Editar Cita',
+        ),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.textTitle,
       ),
@@ -262,7 +296,8 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
                     children: <Widget>[
                       Text(
                         'Detalles de la Cita',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: AppColors.primary,
                             ),
@@ -343,55 +378,54 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
                       Text(
                         'Estudiante Asociado',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16.0),
-                      _isLoadingEstudiantes
-                          ? const Center(child: CircularProgressIndicator())
-                          : _estudiantesError != null
-                              ? Text(
-                                  _estudiantesError!,
-                                  style: const TextStyle(color: AppColors.error),
-                                  textAlign: TextAlign.center,
-                                )
-                              : DropdownButtonFormField<Estudiante>(
-                                  decoration: const InputDecoration(
-                                    labelText: 'Estudiante',
-                                    border: OutlineInputBorder(),
-                                    prefixIcon: Icon(Icons.person_search),
-                                  ),
-                                  value: _selectedEstudiante,
-                                  hint: const Text('Selecciona un estudiante'),
-                                  isExpanded: true,
-                                  items: _estudiantes.map((estudiante) {
-                                    return DropdownMenuItem<Estudiante>(
-                                      value: estudiante,
-                                      child: Text('${estudiante.nombres} ${estudiante.apellidos}'),
-                                    );
-                                  }).toList(),
-                                  onChanged: (Estudiante? newValue) {
-                                    // [CAMBIO]: No es necesario verificar 'mounted' aquí
-                                    // porque onChanged se llama directamente desde un widget
-                                    // que está visible en el árbol de widgets.
-                                    setState(() {
-                                      _selectedEstudiante = newValue;
-                                    });
-                                  },
-                                  validator: (value) {
-                                    if (value == null) {
-                                      return 'Por favor, selecciona un estudiante.';
-                                    }
-                                    return null;
-                                  },
-                                ),
+                      // Dropdown de Estudiantes
+                      CustomDropdownButton<Estudiante>(
+                        labelText: 'Estudiante',
+                        hintText: 'Selecciona un estudiante',
+                        prefixIcon: Icons.person_search,
+                        isLoading: _isLoadingEstudiantes,
+                        errorMessage: _estudiantesError,
+                        items:
+                            _estudiantes, // Asumiendo que _estudiantes es List<Estudiante>
+                        value: _selectedEstudiante,
+                        onChanged: (newValue) {
+                          setState(() {
+                            _selectedEstudiante = newValue;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Por favor, selecciona un estudiante.';
+                          }
+                          return null;
+                        },
+                        // --- ¡NUEVOS PARÁMETROS REQUERIDOS! ---
+                        // Cómo mostrar el texto en el dropdown y en la lista de búsqueda
+                        itemDisplayText: (estudiante) =>
+                            '${estudiante.nombres} ${estudiante.apellidos}',
+                        // Lógica de búsqueda: combina nombres y apellidos y busca el query en ellos
+                        itemSearchFilter: (estudiante, query) {
+                          final fullText =
+                              '${estudiante.nombres} ${estudiante.apellidos}'
+                                  .toLowerCase();
+                          return fullText.contains(query.toLowerCase());
+                        },
+                      ),
                       const SizedBox(height: 24.0),
                       ElevatedButton.icon(
                         onPressed: _submitForm,
                         icon: const Icon(Icons.save),
-                        label: Text(widget.citaToEdit == null ? 'Guardar Cita' : 'Actualizar Cita'),
+                        label: Text(
+                          widget.citaToEdit == null
+                              ? 'Guardar Cita'
+                              : 'Actualizar Cita',
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: AppColors.textTitle,

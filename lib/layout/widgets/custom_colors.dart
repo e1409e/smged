@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 class AppColors{
   //Colores principales
   static const Color primary = Color(0xFF2081C2);
-
+static const Color secondary = Color(0xFF1F587D);
  // Colores de estado/feedback
   static const Color success = Colors.green; // Verde para éxito
   static const Color error = Colors.red;     // Rojo para errores

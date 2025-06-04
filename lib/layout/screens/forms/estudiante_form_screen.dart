@@ -8,7 +8,7 @@ import 'package:smged/api/services/discapacidades_service.dart'; // Importa el s
 import 'package:smged/api/models/estudiante.dart'; // ¡Asegúrate de importar tu modelo Estudiante!
 import 'package:smged/api/services/estudiantes_service.dart'; // ¡Asegúrate de importar tu servicio EstudiantesService!
 import 'package:collection/collection.dart'; // ¡Añade esta línea!
-
+import 'package:smged/layout/widgets/custom_dropdown_button.dart';
 // Importa para usar TextInputFormatter
 import 'package:flutter/services.dart';
 
@@ -34,7 +34,8 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
   final TextEditingController _telefonoController = TextEditingController();
   final TextEditingController _correoController = TextEditingController();
   final TextEditingController _direccionController = TextEditingController();
-  final TextEditingController _observacionesController = TextEditingController();
+  final TextEditingController _observacionesController =
+      TextEditingController();
   final TextEditingController _seguimientoController = TextEditingController();
 
   // NUEVOS CONTROLADORES
@@ -66,7 +67,6 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
   bool _poseeConapdis = false;
   // --- FIN POSEE CONAPDIS ---
 
-
   @override
   void initState() {
     super.initState();
@@ -77,7 +77,7 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
       final estudiante = widget.estudianteToEdit!;
       _nombresController.text = estudiante.nombres;
       _apellidosController.text = estudiante.apellidos;
-      
+
       // --- MODIFICACIÓN PARA CÉDULA AL EDITAR ---
       if (estudiante.cedula.startsWith('V-')) {
         _cedulaPrefix = 'V-';
@@ -133,14 +133,16 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
       _discapacidadesError = null;
     });
     try {
-      final fetchedDiscapacidades = await _discapacidadesService.obtenerDiscapacidades();
+      final fetchedDiscapacidades = await _discapacidadesService
+          .obtenerDiscapacidades();
       setState(() {
         _discapacidades = fetchedDiscapacidades;
         _setInitialDiscapacidadSelection();
       });
     } catch (e) {
       setState(() {
-        _discapacidadesError = 'Error al cargar discapacidades: ${e.toString().replaceFirst('Exception: ', '')}';
+        _discapacidadesError =
+            'Error al cargar discapacidades: ${e.toString().replaceFirst('Exception: ', '')}';
       });
     } finally {
       setState(() {
@@ -162,7 +164,8 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
       });
     } catch (e) {
       setState(() {
-        _carrerasError = 'Error al cargar carreras: ${e.toString().replaceFirst('Exception: ', '')}';
+        _carrerasError =
+            'Error al cargar carreras: ${e.toString().replaceFirst('Exception: ', '')}';
       });
     } finally {
       setState(() {
@@ -177,7 +180,10 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Guardando estudiante...'), duration: Duration(seconds: 1)),
+      const SnackBar(
+        content: Text('Guardando estudiante...'),
+        duration: Duration(seconds: 1),
+      ),
     );
 
     try {
@@ -239,15 +245,21 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
       Estudiante? savedEstudiante;
 
       if (isEditing) {
-        savedEstudiante = await _estudiantesService.actualizarEstudiante(estudiantePayload);
+        savedEstudiante = await _estudiantesService.actualizarEstudiante(
+          estudiantePayload,
+        );
       } else {
-        savedEstudiante = await _estudiantesService.crearEstudiante(estudiantePayload);
+        savedEstudiante = await _estudiantesService.crearEstudiante(
+          estudiantePayload,
+        );
       }
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Estudiante "${savedEstudiante?.nombres ?? 'Desconocido'}" ${isEditing ? 'actualizado' : 'guardado'} exitosamente.'),
+          content: Text(
+            'Estudiante "${savedEstudiante?.nombres ?? 'Desconocido'}" ${isEditing ? 'actualizado' : 'guardado'} exitosamente.',
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -257,7 +269,9 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error al ${widget.estudianteToEdit != null ? 'actualizar' : 'guardar'} estudiante: ${e.toString().replaceFirst('Exception: ', '')}'),
+          content: Text(
+            'Error al ${widget.estudianteToEdit != null ? 'actualizar' : 'guardar'} estudiante: ${e.toString().replaceFirst('Exception: ', '')}',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -304,7 +318,8 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+    final isDesktop =
+        defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux ||
         defaultTargetPlatform == TargetPlatform.fuchsia;
@@ -313,7 +328,11 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.estudianteToEdit == null ? 'Registrar Estudiante' : 'Editar Estudiante'),
+        title: Text(
+          widget.estudianteToEdit == null
+              ? 'Registrar Estudiante'
+              : 'Editar Estudiante',
+        ),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.textTitle,
       ),
@@ -337,7 +356,8 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                     children: <Widget>[
                       Text(
                         'Datos Personales',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: AppColors.primary,
                             ),
@@ -382,8 +402,14 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                             child: DropdownButton<String>(
                               value: _cedulaPrefix,
                               items: const [
-                                DropdownMenuItem(value: 'V-', child: Text('V-')),
-                                DropdownMenuItem(value: 'E-', child: Text('E-')),
+                                DropdownMenuItem(
+                                  value: 'V-',
+                                  child: Text('V-'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'E-',
+                                  child: Text('E-'),
+                                ),
                               ],
                               onChanged: (String? newValue) {
                                 if (newValue != null) {
@@ -392,13 +418,15 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                                   });
                                 }
                               },
-                              dropdownColor: Theme.of(context).cardColor, 
+                              dropdownColor: Theme.of(context).cardColor,
                               icon: const Icon(Icons.arrow_drop_down),
                               elevation: 8,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                           ),
-                          const SizedBox(width: 8.0), // Espacio entre el dropdown y el campo de texto
+                          const SizedBox(
+                            width: 8.0,
+                          ), // Espacio entre el dropdown y el campo de texto
                           Expanded(
                             child: TextFormField(
                               controller: _cedulaController,
@@ -407,16 +435,21 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                                 border: OutlineInputBorder(),
                                 prefixIcon: Icon(Icons.credit_card),
                               ),
-                              keyboardType: TextInputType.number, // Solo números después del prefijo
+                              keyboardType: TextInputType
+                                  .number, // Solo números después del prefijo
                               inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly, // Permite solo dígitos
-                                LengthLimitingTextInputFormatter(9), // Limita la longitud a 9 dígitos (ej: 012345678)
+                                FilteringTextInputFormatter
+                                    .digitsOnly, // Permite solo dígitos
+                                LengthLimitingTextInputFormatter(
+                                  9,
+                                ), // Limita la longitud a 9 dígitos (ej: 012345678)
                               ],
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Por favor, introduce la cédula.';
                                 }
-                                if (value.length < 7 || value.length > 9) { // Ajusta la longitud según tu necesidad
+                                if (value.length < 7 || value.length > 9) {
+                                  // Ajusta la longitud según tu necesidad
                                   return 'La cédula debe tener entre 7 y 9 dígitos.';
                                 }
                                 return null;
@@ -425,7 +458,7 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                           ),
                         ],
                       ),
-                      // --- FIN CAMBIOS PARA EL CAMPO DE CÉDULA ---
+
                       const SizedBox(height: 16.0),
                       DatePickerFormField(
                         labelText: 'Fecha de Nacimiento',
@@ -450,9 +483,9 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                       Text(
                         'Información de Contacto',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16.0),
@@ -465,7 +498,9 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                         ),
                         keyboardType: TextInputType.emailAddress,
                         validator: (value) {
-                          if (value != null && value.isNotEmpty && !value.contains('@')) {
+                          if (value != null &&
+                              value.isNotEmpty &&
+                              !value.contains('@')) {
                             return 'Introduce un correo electrónico válido.';
                           }
                           return null;
@@ -481,8 +516,11 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                         ),
                         keyboardType: TextInputType.phone,
                         inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly, // Permite solo dígitos
-                          LengthLimitingTextInputFormatter(11), // Limita la longitud a 11 (ej: 04141234567)
+                          FilteringTextInputFormatter
+                              .digitsOnly, // Permite solo dígitos
+                          LengthLimitingTextInputFormatter(
+                            11,
+                          ), // Limita la longitud a 11 (ej: 04141234567)
                         ],
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -528,85 +566,71 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                       Text(
                         'Datos Académicos y Médicos',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16.0),
                       // Dropdown de Carreras
-                      _isLoadingCarreras
-                          ? const Center(child: CircularProgressIndicator())
-                          : _carrerasError != null
-                              ? Text(
-                                  _carrerasError!,
-                                  style: const TextStyle(color: AppColors.error),
-                                  textAlign: TextAlign.center,
-                                )
-                              : DropdownButtonFormField<Carrera>(
-                                  decoration: const InputDecoration(
-                                    labelText: 'Carrera',
-                                    border: OutlineInputBorder(),
-                                    prefixIcon: Icon(Icons.school),
-                                  ),
-                                  value: _selectedCarrera,
-                                  hint: const Text('Selecciona una carrera'),
-                                  isExpanded: true,
-                                  items: _carreras.map((carrera) {
-                                    return DropdownMenuItem<Carrera>(
-                                      value: carrera,
-                                      child: Text(carrera.carrera), // ¡Solo el nombre de la carrera!
-                                    );
-                                  }).toList(),
-                                  onChanged: (Carrera? newValue) {
-                                    setState(() {
-                                      _selectedCarrera = newValue;
-                                    });
-                                  },
-                                  validator: (value) {
-                                    if (value == null) {
-                                      return 'Por favor, selecciona una carrera.';
-                                    }
-                                    return null;
-                                  },
-                                ),
+                      CustomDropdownButton<Carrera>(
+                        labelText: 'Carrera',
+                        hintText: 'Selecciona una carrera',
+                        prefixIcon: Icons.school,
+                        isLoading: _isLoadingCarreras,
+                        errorMessage: _carrerasError,
+                        items: _carreras,
+                        value: _selectedCarrera,
+                        onChanged: (newValue) {
+                          setState(() {
+                            _selectedCarrera = newValue;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Por favor, selecciona una carrera.';
+                          }
+                          return null;
+                        },
+
+                        itemDisplayText: (carrera) =>
+                            carrera.carrera, // Cómo mostrar el texto del item
+                        itemSearchFilter: (carrera, query) {
+                          return carrera.carrera.toLowerCase().contains(
+                            query,
+                          ); // Lógica de búsqueda
+                        },
+                      ),
                       const SizedBox(height: 16.0),
                       // Dropdown de Discapacidades
-                      _isLoadingDiscapacidades
-                          ? const Center(child: CircularProgressIndicator())
-                          : _discapacidadesError != null
-                              ? Text(
-                                  _discapacidadesError!,
-                                  style: const TextStyle(color: AppColors.error),
-                                  textAlign: TextAlign.center,
-                                )
-                              : DropdownButtonFormField<Discapacidad>(
-                                  decoration: const InputDecoration(
-                                    labelText: 'Discapacidad',
-                                    border: OutlineInputBorder(),
-                                    prefixIcon: Icon(Icons.accessible),
-                                  ),
-                                  value: _selectedDiscapacidad,
-                                  hint: const Text('Selecciona una discapacidad'),
-                                  isExpanded: true,
-                                  items: _discapacidades.map((discapacidad) {
-                                    return DropdownMenuItem<Discapacidad>(
-                                      value: discapacidad,
-                                      child: Text(discapacidad.nombre),
-                                    );
-                                  }).toList(),
-                                  onChanged: (Discapacidad? newValue) {
-                                    setState(() {
-                                      _selectedDiscapacidad = newValue;
-                                    });
-                                  },
-                                  validator: (value) {
-                                    if (value == null) {
-                                      return 'Por favor, selecciona una discapacidad.';
-                                    }
-                                    return null;
-                                  },
-                                ),
+                      CustomDropdownButton<Discapacidad>(
+                        labelText: 'Discapacidad',
+                        hintText: 'Selecciona una discapacidad',
+                        prefixIcon: Icons.accessible,
+                        isLoading: _isLoadingDiscapacidades,
+                        errorMessage: _discapacidadesError,
+                        items: _discapacidades,
+                        value: _selectedDiscapacidad,
+                        onChanged: (newValue) {
+                          setState(() {
+                            _selectedDiscapacidad = newValue;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Por favor, selecciona una discapacidad.';
+                          }
+                          return null;
+                        },
+                        
+                        itemDisplayText: (discapacidad) =>
+                            discapacidad.nombre, // Cómo mostrar el texto
+                        itemSearchFilter: (discapacidad, query) {
+                          return discapacidad.nombre.toLowerCase().contains(
+                            query,
+                          ); // Lógica de búsqueda
+                        },
+                      ),
                       const SizedBox(height: 16.0),
                       // Switch para "Posee CONAPDIS"
                       Row(
@@ -652,7 +676,11 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                       ElevatedButton.icon(
                         onPressed: _submitForm,
                         icon: const Icon(Icons.save),
-                        label: Text(widget.estudianteToEdit == null ? 'Guardar Estudiante' : 'Actualizar Estudiante'),
+                        label: Text(
+                          widget.estudianteToEdit == null
+                              ? 'Guardar Estudiante'
+                              : 'Actualizar Estudiante',
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: AppColors.textTitle,
