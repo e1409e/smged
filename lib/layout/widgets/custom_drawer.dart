@@ -68,7 +68,7 @@ class CustomDrawer extends StatelessWidget {
                   style: TextStyles.title.copyWith(color: AppColors.textTitle), // Estilo de texto del título
                 ),
                 Text(
-                  'Rol (Ej. Psicólogo/Administrador)', // Placeholder para el rol
+                  'Psicólogo', // Placeholder para el rol
                   style: TextStyles.subtitle.copyWith(color: AppColors.textTitle), // Estilo de texto del subtítulo
                 ),
               ],
@@ -77,8 +77,8 @@ class CustomDrawer extends StatelessWidget {
 
           // Elemento del menú: Dashboard
           ListTile(
-            leading: const Icon(Icons.dashboard),
-            title: const Text('Dashboard'),
+            leading: const Icon(Icons.home),
+            title: const Text('Inicio'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
               // Si el Dashboard es la ruta '/home' o alguna ruta específica de un rol, puedes navegar:
@@ -116,16 +116,6 @@ class CustomDrawer extends StatelessWidget {
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
               // Navigator.pushNamed(context, app_routes.AppRoutes.historialMedico); // Descomentar cuando la ruta esté definida
-            },
-          ),
-          
-          // Elemento del menú: Reportes (descomenta y ajusta cuando la ruta esté lista)
-          ListTile(
-            leading: const Icon(Icons.report),
-            title: const Text('Reportes'),
-            onTap: () {
-              Navigator.pop(context); // Cierra el Drawer
-              // Navigator.pushNamed(context, app_routes.AppRoutes.reportes); // Descomentar cuando la ruta esté definida
             },
           ),
           

@@ -1,14 +1,12 @@
 // lib/layout/screens/home_screen.dart
 import 'package:flutter/material.dart';
-import 'package:smged/api/services/citas_service.dart';
-import 'package:smged/api/models/cita.dart';
+import 'package:smged/api/services/citas_service.dart'; // Mantener por el momento para el conteo de citas
+import 'package:smged/api/models/cita.dart'; // Mantener por el momento para el conteo de citas
 import 'package:smged/layout/widgets/custom_app_bar.dart';
 import 'package:smged/layout/widgets/custom_drawer.dart';
+import 'package:smged/layout/widgets/custom_colors.dart';
+import 'package:smged/layout/widgets/info_card.dart'; // ¡Asegúrate de que esta esté importada!
 
-/// La pantalla principal que se muestra después de un inicio de sesión exitoso.
-///
-/// Recibe un [VoidCallback] `onLogout` para permitir al usuario cerrar la sesión
-/// y volver a la pantalla de login.
 class HomeScreen extends StatefulWidget {
   final VoidCallback onLogout;
 
@@ -19,13 +17,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // Mantengo CitasService y _citasPendientesCount para el AppBar
   final CitasService _citasService = CitasService();
   int _citasPendientesCount = 0;
-  bool _showAlert = true;
 
   @override
   void initState() {
     super.initState();
+    // Solo carga el conteo de citas pendientes por ahora
     _fetchCitasPendientesCount();
   }
 
@@ -33,89 +32,144 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final List<Cita> citas = await _citasService.obtenerCitas();
       final int pendientes = citas.where((cita) => cita.pendiente == 1).length;
-      setState(() {
-        _citasPendientesCount = pendientes;
-      });
+      if (mounted) {
+        setState(() {
+          _citasPendientesCount = pendientes;
+        });
+      }
     } catch (e) {
       print('Error al cargar el conteo de citas pendientes: $e');
-      // Podrías mostrar un Snackbar o mensaje de error al usuario
     }
+  }
+
+  void _showCitasPendientesAlert() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Citas Pendientes', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: _citasPendientesCount > 0
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.info_outline, color: AppColors.warning, size: 40),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Tienes $_citasPendientesCount citas pendientes.',
+                      style: const TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                )
+              : const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_outline, color: AppColors.success, size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      'No tienes citas pendientes.',
+                      style: TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // --- Usando el AppBar personalizado sin botón de logout ---
-      appBar: const CustomAppBar( // Ya no necesita onLogout ni showLogoutButton
+      appBar: CustomAppBar(
         title: 'INICIO',
+        actions: [
+          if (_citasPendientesCount > 0)
+            Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_active),
+                  onPressed: _showCitasPendientesAlert,
+                  tooltip: 'Ver citas pendientes',
+                ),
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 14,
+                      minHeight: 14,
+                    ),
+                    child: Text(
+                      '$_citasPendientesCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+              ],
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.notifications_none),
+              onPressed: _showCitasPendientesAlert,
+              tooltip: 'No hay citas pendientes',
+            ),
+        ],
       ),
-      // --- Usando el Drawer personalizado ---
       drawer: CustomDrawer(
-        onLogout: widget.onLogout, // Pasa el callback de logout al CustomDrawer
+        onLogout: widget.onLogout,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(0.0),
+        // Removido RefreshIndicator por ahora, se puede añadir más adelante
         child: Column(
           children: [
-            if (_showAlert && _citasPendientesCount > 0)
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(top: 16.0, left: 16.0, right: 16.0, bottom: 8.0),
-                padding: const EdgeInsets.all(12.0),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade100,
-                  border: Border.all(color: Colors.amber.shade400),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.amber.shade500),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Tienes $_citasPendientesCount citas pendientes.',
-                        style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      color: Colors.amber.shade700,
-                      onPressed: () {
-                        setState(() {
-                          _showAlert = false;
-                        });
-                      },
-                      tooltip: 'Ocultar alerta',
-                    ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 16),
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    color: Colors.green,
-                    size: 80,
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    '¡Has iniciado sesión exitosamente!',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Aquí se mostrará el contenido principal de tu aplicación.',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+            const SizedBox(height: 16), // Espacio superior
+
+            // Tarjeta: Cantidad de Estudiantes (con valores estáticos por ahora)
+            const InfoCard(
+              title: 'Cantidad de Estudiantes',
+              value: '120', // Valor estático
+              icon: Icons.people_alt,
+              color: AppColors.primary,
+              onTap: null, // Sin funcionalidad por ahora
             ),
+
+            // Tarjeta: Incidentes en el Mes (con valores estáticos por ahora)
+            const InfoCard(
+              title: 'Incidentes en el Mes',
+              value: '5', // Valor estático
+              icon: Icons.warning_amber,
+              color: AppColors.warning,
+              onTap: null, // Sin funcionalidad por ahora
+            ),
+
+            // Tarjeta: Informar a Estudiante de Cita (con texto estático)
+            const InfoCard(
+              title: 'Informar a Estudiante de Cita',
+              value: 'Acción Rápida', // Texto estático descriptivo
+              icon: Icons.calendar_today,
+              color: AppColors.success,
+              onTap: null, // Sin funcionalidad por ahora
+            ),
+
+            const SizedBox(height: 20), // Espacio inferior
           ],
         ),
       ),
