@@ -1,6 +1,7 @@
 // lib/layout/widgets/custom_data_table.dart
 import 'package:flutter/material.dart';
 import 'package:data_table_2/data_table_2.dart';
+import 'package:smged/layout/widgets/custom_data_table_source.dart'; // Importa la nueva fuente de datos
 
 abstract class TableData {
   int get id; // Necesario para identificar filas únicas
@@ -16,10 +17,11 @@ class CustomDataTable<T extends TableData> extends StatelessWidget {
   final List<T> data;
   final List<DataColumn2> columns;
   final double? minWidth;
-  // El tipo de la función en el mapa sigue siendo Function(T item)
   final Map<String, Function(T item)> actionCallbacks;
   final int? sortColumnIndex;
   final bool sortAscending;
+  final int rowsPerPage; // Nuevo parámetro para la paginación
+  final bool showActions; // Nuevo parámetro para mostrar/ocultar los botones de acción del paginador
 
   const CustomDataTable({
     super.key,
@@ -29,6 +31,8 @@ class CustomDataTable<T extends TableData> extends StatelessWidget {
     this.minWidth,
     this.sortColumnIndex,
     this.sortAscending = true,
+    this.rowsPerPage = 10, // Valor por defecto
+    this.showActions = true, // Por defecto se muestran los botones de acción
   });
 
   @override
@@ -42,30 +46,28 @@ class CustomDataTable<T extends TableData> extends StatelessWidget {
       );
     }
 
-    return DataTable2(
-      minWidth: minWidth,
+    final CustomDataTableSource<T> source = CustomDataTableSource<T>(
+      data: data,
       columns: columns,
-      rows: data.map((item) {
-        // Al pasar los actionCallbacks, necesitamos asegurar que el 'item' que recibe el callback
-        // dentro de getCells sea el tipo T correcto.
-        // Hacemos un mapeo para ajustar el tipo de entrada de Function(T item) a Function(dynamic item).
-        // El 'item' que se pasa al callback dentro de DataCell será el 'this' (que es un Estudiante).
-        final Map<String, Function(dynamic item)> dynamicActionCallbacks =
-            actionCallbacks.map((key, value) {
-          return MapEntry(key, (dynamic i) => value(i as T));
-        });
+      actionCallbacks: actionCallbacks,
+      context: context, // Pasamos el BuildContext
+    );
 
-        List<DataCell> cells = item.getCells(context, columns, dynamicActionCallbacks);
-
-
-        return DataRow(
-          key: ValueKey(item.id),
-          cells: cells,
-        );
-      }).toList(),
-      fixedTopRows: 1,
+    return PaginatedDataTable2(
+      columns: columns,
+      source: source,
+      minWidth: minWidth,
       sortColumnIndex: sortColumnIndex,
       sortAscending: sortAscending,
+      rowsPerPage: rowsPerPage,
+      availableRowsPerPage: const [5, 10, 20, 50], // Opciones de filas por página
+      onRowsPerPageChanged: (int? value) {
+        // Puedes agregar lógica aquí para guardar la preferencia del usuario,
+        // o simplemente reconstruir el widget si es necesario.
+        // setState(() => _rowsPerPage = value!); // Si estuvieras en un StatefulWidget
+      },
+      // Puedes personalizar los botones de acción del paginador
+      // actions: showActions ? <Widget>[] : null, // Ejemplo para ocultar acciones
     );
   }
 }

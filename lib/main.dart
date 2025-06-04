@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'; // Importa este paquete
 
 // Importa todas las pantallas que serán la 'home' inicial o dashboards
 import 'package:smged/layout/screens/login_screen.dart';
@@ -86,17 +87,14 @@ class _MyAppState extends State<MyApp> {
         case 'administrador':
           return const AdminDashboardScreen();
         case 'psicologo':
-          // Pasamos _handleLogout a HomeScreen, que es un VoidCallback
           return HomeScreen(onLogout: _handleLogout);
         case 'docente':
           return const DocenteDashboardScreen();
         default:
           debugPrint('[_MyAppState] Rol desconocido: $_userRole. Redirigiendo a LoginScreen por defecto.');
-          // Aquí pasamos _handleLoginSuccess, que acepta un String?
           return LoginScreen(onLoginSuccess: _handleLoginSuccess);
       }
     } else {
-      // Aquí pasamos _handleLoginSuccess a LoginScreen, que acepta un String?
       return LoginScreen(onLoginSuccess: _handleLoginSuccess);
     }
   }
@@ -108,6 +106,29 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'SMGED App',
       debugShowCheckedModeBanner: false,
+      // --- Configuración de localización para español ---
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate, // Proporciona traducciones para widgets Material
+        GlobalWidgetsLocalizations.delegate,  // Proporciona traducciones para widgets genéricos
+        GlobalCupertinoLocalizations.delegate, // Proporciona traducciones para widgets de estilo iOS
+        // Aquí puedes añadir tus propios delegados si tienes traducciones personalizadas
+      ],
+      supportedLocales: const [
+        Locale('en', ''), // Soporte para inglés
+        Locale('es', ''), // Soporte para español
+      ],
+      // Opcional: Si quieres forzar el idioma a español sin depender de la configuración del dispositivo
+      // locale: const Locale('es', ''),
+      //
+      // Opcional: Callback para resolver el locale si el del dispositivo no está en supportedLocales
+      localeResolutionCallback: (locale, supportedLocales) {
+        if (locale != null && supportedLocales.contains(locale)) {
+          return locale;
+        }
+        // Si el dispositivo no tiene un idioma compatible, usa español por defecto
+        return const Locale('es', '');
+      },
+      // --- Fin de configuración de localización ---
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary).copyWith(
           primary: AppColors.primary,
