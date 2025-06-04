@@ -5,7 +5,8 @@ import 'package:smged/api/models/cita.dart'; // Mantener por el momento para el 
 import 'package:smged/layout/widgets/custom_app_bar.dart';
 import 'package:smged/layout/widgets/custom_drawer.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
-import 'package:smged/layout/widgets/info_card.dart'; // ¡Asegúrate de que esta esté importada!
+import 'package:smged/layout/widgets/info_card.dart';
+import 'package:smged/routes.dart' as app_routes; // ¡Asegúrate de que esta esté importada!
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onLogout;
@@ -47,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Citas Pendientes', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text('Citas Pendientes', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
           content: _citasPendientesCount > 0
               ? Column(
                   mainAxisSize: MainAxisSize.min,
@@ -58,6 +59,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       'Tienes $_citasPendientesCount citas pendientes.',
                       style: const TextStyle(fontSize: 16),
                       textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context); // Cierra el Drawer
+                        // Navega a la ruta de la lista de citas usando la constante
+                        Navigator.pushNamed(
+                          context,
+                          app_routes.AppRoutes.citasList,
+                        );
+                      },
+                      child: const Text('Ver Citas'),
                     ),
                   ],
                 )
