@@ -16,22 +16,34 @@ class CitasUtils {
 
     // Determinar el estado de la cita
     String estadoCita = cita.pendiente == 1 ? 'Pendiente' : 'Realizada';
-    Color estadoColor = cita.pendiente == 1 ? AppColors.info : AppColors.success; // Color para el estado
+    Color estadoColor = cita.pendiente == 1
+        ? AppColors.info
+        : AppColors.success; // Color para el estado
 
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) { // Usamos dialogContext para claridad
+      builder: (BuildContext dialogContext) {
+        // Usamos dialogContext para claridad
         return AlertDialog(
-          title: const Text('Información Detallada de la Cita'),
+          title: Align(
+            child: const Text(
+              'Información de la Cita',
+              style: TextStyle(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
                 // Campo Código (Etiqueta en negrita)
-                Text.rich( // Usamos Text.rich para combinar texto normal y negrita
+                Text.rich(
+                  // Usamos Text.rich para combinar texto normal y negrita
                   TextSpan(
                     children: [
                       const TextSpan(
-                          text: 'Código: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                        text: 'Código: ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       TextSpan(text: cita.id_citas?.toString() ?? 'N/A'),
                     ],
                   ),
@@ -42,18 +54,22 @@ class CitasUtils {
                   TextSpan(
                     children: [
                       const TextSpan(
-                          text: 'Estudiante: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                        text: 'Estudiante: ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       TextSpan(text: cita.nombre_estudiante ?? 'N/A'),
                     ],
                   ),
                 ),
-                
+
                 // Campo Fecha (Etiqueta en negrita)
                 Text.rich(
                   TextSpan(
                     children: [
                       const TextSpan(
-                          text: 'Fecha: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                        text: 'Fecha: ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       TextSpan(text: fechaCitaFormateada),
                     ],
                   ),
@@ -67,24 +83,32 @@ class CitasUtils {
                 ),
                 Text(
                   cita.motivo_cita ?? 'N/A',
-                  softWrap: true, // Permite que el texto se ajuste a varias líneas
+                  softWrap:
+                      true, // Permite que el texto se ajuste a varias líneas
                   overflow: TextOverflow.visible,
                 ),
                 // Eliminamos el Text('') que estaba vacío
-                
+
                 // Campo Estado (Etiqueta en negrita para "Estado:", y Chip)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8.0), // Pequeño padding para separar
+                  padding: const EdgeInsets.only(
+                    top: 8.0,
+                  ), // Pequeño padding para separar
                   child: Row(
                     children: [
                       const Text(
                         'Estado: ',
-                        style: TextStyle(fontWeight: FontWeight.bold), // Etiqueta en negrita
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ), // Etiqueta en negrita
                       ),
                       Chip(
                         label: Text(
                           estadoCita,
-                          style: TextStyle(color: estadoColor, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: estadoColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         backgroundColor: Colors.grey[200],
                         padding: const EdgeInsets.all(1),
@@ -100,7 +124,9 @@ class CitasUtils {
             TextButton(
               child: const Text('Cerrar'),
               onPressed: () {
-                Navigator.of(dialogContext).pop(); // Usa dialogContext aquí también
+                Navigator.of(
+                  dialogContext,
+                ).pop(); // Usa dialogContext aquí también
               },
             ),
           ],

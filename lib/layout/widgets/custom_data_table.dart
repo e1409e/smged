@@ -2,12 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:data_table_2/data_table_2.dart';
 
-// Define una interfaz o contrato para los datos que se mostrarán en la tabla.
-// Tu modelo 'Estudiante' debe implementar esta interfaz.
 abstract class TableData {
   int get id; // Necesario para identificar filas únicas
   // getCells ahora acepta el callback para acciones con un tipo 'dynamic'
-  // El casting a 'Estudiante' se hará en los métodos de _EstudiantesScreenState
   List<DataCell> getCells(
     BuildContext context,
     List<DataColumn2> currentColumns,

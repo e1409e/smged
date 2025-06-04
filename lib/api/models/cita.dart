@@ -28,7 +28,7 @@ class Cita implements TableData {
   Cita({
     this.id_citas,
     required this.id_estudiante,
-    this.nombre_estudiante, // Añade al constructor para que pueda ser inicializado
+    this.nombre_estudiante, 
     required this.fecha_cita,
     this.motivo_cita,
     required this.pendiente,
@@ -53,7 +53,7 @@ class Cita implements TableData {
     DateTime? fecha_cita,
     String? motivo_cita,
     int? pendiente,
-    String? nombre_estudiante, // También incluye el nuevo campo aquí
+    String? nombre_estudiante, 
   }) {
     return Cita(
       id_citas: id_citas ?? this.id_citas,
@@ -62,12 +62,12 @@ class Cita implements TableData {
       motivo_cita: motivo_cita ?? this.motivo_cita,
       pendiente: pendiente ?? this.pendiente,
       nombre_estudiante:
-          nombre_estudiante ?? this.nombre_estudiante, // Añade esto
+          nombre_estudiante ?? this.nombre_estudiante, 
     );
   }
 
   @override
-  int get id => id_citas ?? 0; // Implementación de TableData
+  int get id => id_citas ?? 0; 
 
 @override
 List<DataCell> getCells(

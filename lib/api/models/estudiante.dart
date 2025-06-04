@@ -61,11 +61,10 @@ class Estudiante implements TableData {
         if (value is int) {
           return value == 1; // 1 es true, 0 es false.
         }
-        // Si por alguna razón viene como bool directamente (ej. durante testing), lo maneja
         if (value is bool) {
           return value;
         }
-        return null; // O podrías lanzar un error si el tipo es inesperado
+        return null; 
       }
 
       return Estudiante(
@@ -119,12 +118,12 @@ class Estudiante implements TableData {
       'fecha_nacimiento': fechaNacimiento?.toIso8601String().split('T').first, // Solo la fecha YYYY-MM-DD
       'correo': correo,
       'telefono': telefono,
-      'otro_telefono': otroTelefono, // Incluir si se envía al backend
+      'otro_telefono': otroTelefono, 
       'direccion': direccion,
       'observaciones': observaciones,
       'seguimiento': seguimiento,
       'discapacidad_id': idDiscapacidad,
-      'id_carrera': idCarrera, // Incluir si se envía al backend
+      'id_carrera': idCarrera, 
       'posee_conapdis': _boolToInt(poseeConapdis), // Usar la función de conversión
       // Los campos como 'discapacidad', 'nombreRepre', 'nombreFacultad', etc.
       // no se incluyen aquí porque son datos para visualización que el backend
@@ -133,14 +132,7 @@ class Estudiante implements TableData {
   }
 
   @override
-  int get id {
-    // Mantengo la solución del ID temporal. Puedes usar 0 si estás seguro
-    // de que 0 nunca será un ID válido en tu base de datos y que no tendrás
-    // múltiples estudiantes nulos en la misma tabla.
-    return idEstudiante ?? (Object.hash(this, nombres, cedula).abs() + 1) * -1;
-    // Si prefieres la versión simple que tenías antes:
-    // return idEstudiante ?? 0;
-  }
+  int get id { return idEstudiante ?? (Object.hash(this, nombres, cedula).abs() + 1) * -1; }
 
   @override
   List<DataCell> getCells(
