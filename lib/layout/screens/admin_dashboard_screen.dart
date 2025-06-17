@@ -5,7 +5,9 @@ import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/routes.dart';
 import 'package:smged/api/services/usuarios_service.dart';
 import 'package:smged/api/services/facultades_service.dart';
+import 'package:smged/api/services/carreras_service.dart';
 import 'package:smged/api/models/facultad.dart';
+import 'package:smged/api/models/carrera.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   final VoidCallback? onLogout;
@@ -18,6 +20,7 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _totalUsuarios = 0;
   List<Facultad> _facultades = [];
+  List<Carrera> _carreras = [];
   bool _isLoading = true;
 
   @override
@@ -30,16 +33,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     setState(() => _isLoading = true);
     try {
       final usuarios = await UsuariosService().obtenerUsuarios();
-      final facultades = await FacultadesService().obtenerFacultadesConCarreras();
+      final facultades = await FacultadesService().obtenerFacultades();
+      final carreras = await CarrerasService().obtenerCarreras();
       setState(() {
         _totalUsuarios = usuarios.length;
         _facultades = facultades;
+        _carreras = carreras;
       });
     } catch (e) {
-      // Manejo de errores simple
       setState(() {
         _totalUsuarios = 0;
         _facultades = [];
+        _carreras = [];
       });
     } finally {
       setState(() => _isLoading = false);
@@ -69,6 +74,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  int _cantidadCarrerasPorFacultad(int idFacultad) {
+    return _carreras.where((c) => c.idFacultad == idFacultad).length;
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool esEscritorio = MediaQuery.of(context).size.width > 700;
@@ -76,17 +85,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Panel de Administración', style: TextStyle(color: Colors.white)),
+        title: const Text('INICIO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          if (widget.onLogout != null)
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Cerrar sesión',
-              onPressed: widget.onLogout,
-            ),
-        ],
+
       ),
       drawer: Drawer(
         child: ListView(
@@ -224,8 +226,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               ..._facultades.map((facultad) => Padding(
                                     padding: const EdgeInsets.symmetric(vertical: 6.0),
                                     child: Text(
-                                      'La Facultad de ${facultad.facultad} tiene ${facultad.carreras.length} carreras',
+                                      'La Facultad de ${facultad.facultad} tiene ${_cantidadCarrerasPorFacultad(facultad.idFacultad)} carreras',
                                       style: const TextStyle(fontSize: 16),
+                                      textAlign: TextAlign.start,
                                     ),
                                   )),
                               if (_facultades.isEmpty)
