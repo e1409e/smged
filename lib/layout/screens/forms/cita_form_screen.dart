@@ -56,7 +56,7 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
       // que se llama después de que _estudiantes se carga.
     } else {
       // Establecer un valor predeterminado para _selectedPendiente si es una cita nueva
-      _selectedPendiente = 1; // Por ejemplo, 'Pendiente' por defecto
+      _selectedPendiente = 1; 
     }
   }
 
@@ -75,9 +75,6 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
     try {
       final fetchedEstudiantes = await _estudiantesService
           .obtenerTodosLosEstudiantes();
-
-      // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
-      // Si el widget ya no está montado, sal de la función para evitar llamar a setState en un State desmontado.
       if (!mounted) return;
 
       setState(() {
@@ -85,7 +82,6 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
         _setInitialEstudianteSelection();
       });
     } catch (e) {
-      // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
       if (!mounted) return;
 
       setState(() {
@@ -93,8 +89,6 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
             'Error al cargar estudiantes: ${e.toString().replaceFirst('Exception: ', '')}';
       });
     } finally {
-      // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
-      // Asegúrate de que el widget sigue montado antes de actualizar el estado final.
       if (mounted) {
         setState(() {
           _isLoadingEstudiantes = false;
@@ -109,9 +103,6 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
         (e) => e.idEstudiante == widget.citaToEdit!.id_estudiante,
       );
       if (initialEstudiante != null) {
-        // No necesitas setState aquí porque esta función es llamada dentro de un setState
-        // o inmediatamente después de uno en _fetchEstudiantes().
-        // Si la llamaras de forma independiente, sí necesitarías setState.
         _selectedEstudiante = initialEstudiante;
       }
     }
@@ -312,13 +303,6 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
                           prefixIcon: Icon(Icons.description),
                         ),
                         maxLines: 3,
-                        // [CAMBIO]: Removido validador si el campo puede ser opcional
-                        // validator: (value) {
-                        //   if (value == null || value.isEmpty) {
-                        //     return 'Por favor, ingresa el motivo de la cita.';
-                        //   }
-                        //   return null;
-                        // },
                       ),
                       const SizedBox(height: 16.0),
                       DatePickerFormField(

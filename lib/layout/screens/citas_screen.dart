@@ -197,7 +197,7 @@ class _CitasScreenState extends State<CitasScreen> {
         return AlertDialog(
           title: const Text('Confirmar Eliminación'),
           content: Text(
-            '¿Estás seguro de que quieres eliminar la cita con ID ${cita.id_citas} (${cita.nombre_estudiante ?? 'N/A'}) del ${cita.fecha_cita.toLocal().toString().split(' ')[0]}?',
+            '¿Estás seguro de que quieres eliminar la cita con ${cita.nombre_estudiante ?? 'N/A'} del ${cita.fecha_cita.toLocal().toString().split(' ')[0]}?',
           ),
           actions: <Widget>[
             TextButton(

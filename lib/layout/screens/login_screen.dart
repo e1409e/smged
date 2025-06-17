@@ -6,6 +6,8 @@ import 'package:smged/api/models/login_response.dart';
 import 'package:smged/api/services/auth_service.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/layout/widgets/custom_TextStyles.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 // Importa tus pantallas de dashboard para cada rol
 import 'package:smged/layout/screens/admin_dashboard_screen.dart'; // Asegúrate de la ruta correcta
@@ -68,19 +70,23 @@ class _LoginScreenState extends State<LoginScreen> {
         password: password,
       );
 
-      final LoginResponse response = await _authService.login(request);
-      debugPrint('[_LoginScreenState] Respuesta de AuthService.login: Success=${response.success}, Rol=${response.rol}, Message=${response.message}');
+      // Suponiendo que usas LoginResponse como modelo:
+      final LoginResponse data = await AuthService().login(request);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('id_usuario', data.id_usuario);
 
-      if (response.success) {
-        debugPrint('[_LoginScreenState] Login exitoso. Notificando al padre (MyApp) con el rol: ${response.rol}');
+      debugPrint('[_LoginScreenState] Respuesta de AuthService.login: Success=${data.success}, Rol=${data.rol}, Message=${data.message}');
+
+      if (data.success) {
+        debugPrint('[_LoginScreenState] Login exitoso. Notificando al padre (MyApp) con el rol: ${data.rol}');
         // ¡CAMBIO CRUCIAL AQUÍ! Llamamos al callback que `main.dart` nos dio.
         // `main.dart` se encargará de la navegación.
-        widget.onLoginSuccess(response.rol); 
+        widget.onLoginSuccess(data.rol); 
         // ¡IMPORTANTE! NO HAYA NAVEGACIÓN DIRECTA AQUÍ DESPUÉS DEL LOGIN.
         // La navegación la controla `main.dart` a través de la propiedad `home`.
       } else {
         setState(() {
-          _errorMessage = response.message;
+          _errorMessage = data.message;
         });
         debugPrint('[_LoginScreenState] Login fallido. Mensaje: $_errorMessage');
       }

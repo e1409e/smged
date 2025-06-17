@@ -17,18 +17,12 @@ class AuthService {
       if (Platform.isAndroid) {
         return 'http://10.0.2.2:3000';
       } else {
-        // Para iOS (simulador o físico) y otros, 127.0.0.1 (localhost) o la IP de tu máquina host.
-        // Si usas un dispositivo iOS físico en la misma red Wi-Fi, deberías usar la IP de tu PC.
         return 'http://127.0.0.1:3000';
       }
     }
   }
 
-  // ¡CORRECCIÓN FINAL AQUÍ!
-  // Basado en tu archivo de rutas de Node.js (router.post('/login', iniciarSesion);),
-  // y asumiendo que el prefijo del router es '/usuarios' en tu archivo principal de Express (ej. app.use('/usuarios', usuariosRoutes);),
-  // el endpoint completo es '/usuarios/login'.
-  static const String _loginEndpoint = '/usuarios/login'; 
+  static const String _loginEndpoint = '/usuarios/login';
 
   Future<LoginResponse> login(LoginRequest request) async {
     final url = Uri.parse('$_baseUrl$_loginEndpoint');
@@ -41,7 +35,6 @@ class AuthService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(request.toJson()),
       );
-
       print('Respuesta de la API (Status: ${response.statusCode}): ${response.body}');
 
       if (response.statusCode == 200) {
@@ -49,12 +42,14 @@ class AuthService {
         return LoginResponse.fromJson(responseBody);
       } else {
         String errorMessage = 'Error desconocido al iniciar sesión.';
-        String? rolFromError; 
+        String? rolFromError;
+        int idUsuarioError = 0;
 
         try {
           final Map<String, dynamic> errorBody = jsonDecode(response.body);
-          // Tu API devuelve 'error' para credenciales inválidas y 'message' en otros casos
           errorMessage = errorBody['error'] ?? errorBody['message'] ?? errorMessage;
+          rolFromError = errorBody['rol'];
+          idUsuarioError = errorBody['id_usuario'] ?? 0;
         } catch (e) {
           print('No se pudo decodificar el cuerpo del error como JSON: $e');
         }
@@ -62,21 +57,17 @@ class AuthService {
         return LoginResponse(
           success: false,
           message: errorMessage,
-          rol: rolFromError,
+          rol: rolFromError ?? '',
+          id_usuario: idUsuarioError,
         );
       }
     } catch (e) {
       print('Excepción capturada en AuthService.login: $e');
-      String userFriendlyMessage = 'Error de conexión. Asegúrate de que el servidor esté funcionando y que tienes conexión a internet.';
-      if (e.toString().contains('SocketException')) {
-        userFriendlyMessage = 'No se pudo conectar al servidor. Verifica tu conexión o la URL de la API.';
-      } else if (e.toString().contains('Connection refused')) {
-        userFriendlyMessage = 'Conexión rechazada. Asegúrate de que el servidor backend está corriendo.';
-      }
       return LoginResponse(
         success: false,
-        message: userFriendlyMessage,
-        rol: null,
+        message: 'Error de conexión. Asegúrate de que el servidor esté funcionando y que tienes conexión a internet.',
+        rol: '',
+        id_usuario: 0,
       );
     }
   }

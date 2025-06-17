@@ -2,16 +2,47 @@
 import 'package:flutter/material.dart';
 import 'package:smged/layout/widgets/custom_drawer.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
+import 'package:smged/routes.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
-  const AdminDashboardScreen({super.key});
+class AdminDashboardScreen extends StatefulWidget {
+  final VoidCallback onLogout;
+
+  const AdminDashboardScreen({super.key, required this.onLogout});
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  void _confirmLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Cerrar sesión?'),
+        content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
+        actions: [
+          TextButton(
+            child: const Text('Cancelar'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          TextButton(
+            child: const Text('Cerrar sesión', style: TextStyle(color: AppColors.error)),
+            onPressed: () {
+              Navigator.of(context).pop();
+              widget.onLogout();
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'INICIO',
+          'ADMINISTRADOR',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,
@@ -57,8 +88,7 @@ class AdminDashboardScreen extends StatelessWidget {
               title: const Text('Usuarios'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navega a la pantalla de usuarios
-                // Navigator.pushNamed(context, '/usuarios');
+                Navigator.pushNamed(context, '/usuarios');
               },
             ),
             ListTile(
@@ -66,8 +96,7 @@ class AdminDashboardScreen extends StatelessWidget {
               title: const Text('Facultades'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navega a la pantalla de facultades
-                // Navigator.pushNamed(context, '/facultades');
+                Navigator.pushNamed(context, AppRoutes.facultades);
               },
             ),
             ListTile(
@@ -75,8 +104,7 @@ class AdminDashboardScreen extends StatelessWidget {
               title: const Text('Carreras'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navega a la pantalla de carreras
-                // Navigator.pushNamed(context, '/carreras');
+                Navigator.pushNamed(context, AppRoutes.carreras);
               },
             ),
             const Divider(),
@@ -84,9 +112,8 @@ class AdminDashboardScreen extends StatelessWidget {
               leading: const Icon(Icons.logout, color: AppColors.error),
               title: const Text('Cerrar Sesión', style: TextStyle(color: AppColors.error)),
               onTap: () {
-                Navigator.pop(context);
-                // TODO: Implementa el logout real aquí si lo necesitas
-                Navigator.of(context).popUntil((route) => route.isFirst);
+                Navigator.pop(context); // Cierra el Drawer
+                _confirmLogout(context); // Muestra el diálogo de confirmación
               },
             ),
           ],

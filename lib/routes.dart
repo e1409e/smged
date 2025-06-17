@@ -3,27 +3,31 @@ import 'package:flutter/material.dart';
 
 import 'package:smged/layout/screens/estudiantes_screen.dart';
 import 'package:smged/layout/screens/forms/estudiante_form_screen.dart';
-import 'package:smged/layout/screens/citas_screen.dart'; // <-- ¡IMPORTA LA PANTALLA DE CITAS!
-import 'package:smged/layout/screens/forms/cita_form_screen.dart'; // <-- ¡IMPORTA LA PANTALLA DEL FORMULARIO DE CITAS!
+import 'package:smged/layout/screens/citas_screen.dart'; 
+import 'package:smged/layout/screens/forms/cita_form_screen.dart';
+import 'package:smged/layout/screens/facultades_screen.dart';
+import 'package:smged/layout/screens/carreras_screen.dart';
+import 'package:smged/layout/screens/usuarios_screen.dart'; 
 
 
-/// Una clase que contiene las constantes de las rutas de tu aplicación.
 class AppRoutes {
   static const String estudiantesList =
-      '/estudiantes'; // Ruta para la lista de estudiantes
+      '/estudiantes'; 
   static const String estudianteForm =
-      '/estudianteForm'; // Ruta para el formulario de estudiante
+      '/estudianteForm'; 
 
-  static const String citasList = '/citas'; // <-- ¡NUEVA RUTA PARA LA LISTA DE CITAS!
-  static const String citaForm = '/citaForm'; // <-- ¡NUEVA RUTA PARA EL FORMULARIO DE CITAS!
+  static const String citasList = '/citas'; 
+  static const String citaForm = '/citaForm'; 
 
-  // Puedes definir aquí otras rutas para tus dashboards si las usas con Navigator.pushNamed
-  // static const String adminDashboardRoute = '/adminDashboard';
-  // static const String adminDashboardRoute = '/adminDashboard';
-  // static const String docenteDashboardRoute = '/docenteDashboard';
+  static const String facultades = '/facultades'; 
+
+  static const String carreras = '/carreras'; 
+
+  static const String usuarios = '/usuarios'; 
+
 }
 
-// Esta función ahora solo devuelve un mapa de rutas para navegación INTERNA.
+// Esta función solo devuelve un mapa de rutas para navegación INTERNA.
 Map<String, WidgetBuilder> getApplicationRoutes() {
   return <String, WidgetBuilder>{
     // Rutas de Estudiantes
@@ -34,12 +38,19 @@ Map<String, WidgetBuilder> getApplicationRoutes() {
 
     // Rutas de Citas
     AppRoutes.citasList: (BuildContext context) =>
-        const CitasScreen(), // <-- ¡AÑADE LA RUTA DE LA LISTA DE CITAS!
+        const CitasScreen(), 
     AppRoutes.citaForm: (BuildContext context) =>
-        const CitaFormScreen(), // <-- ¡AÑADE LA RUTA DEL FORMULARIO DE CITAS!
+        const CitaFormScreen(), 
 
-    // Agrega aquí el resto de tus rutas internas (Historial Médico, Reportes, Configuración, etc.).
-    // AppRoutes.adminDashboardRoute: (BuildContext context) => const AdminDashboardScreen(),
-    // AppRoutes.docenteDashboardRoute: (BuildContext context) => const DocenteDashboardScreen(),
+    // Rutas de Facultades
+    AppRoutes.facultades: (BuildContext context) => const FacultadesScreen(), 
+
+    // Rutas de Carreras
+    AppRoutes.carreras: (BuildContext context) => const CarrerasScreen(), 
+
+    // Rutas de Usuarios
+    AppRoutes.usuarios: (BuildContext context) => const UsuariosScreen(), 
+
+
   };
 }

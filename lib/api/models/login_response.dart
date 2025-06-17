@@ -10,20 +10,22 @@ part 'login_response.g.dart';
 class LoginResponse {
   final String message;
   final bool success;
-  // ¡Añade esta línea para incluir el rol en la respuesta!
-  final String? rol; // El '?' indica que puede ser nulo, si tu API lo permite así.
+  final String rol;
+  final int id_usuario; // <-- Debe estar presente
 
   /// Constructor para crear una instancia de LoginResponse.
   LoginResponse({
     required this.message,
     required this.success,
-    this.rol, // ¡Añádelo también al constructor!
+    required this.rol,
+    required this.id_usuario,
   });
 
   /// Un constructor de fábrica que permite crear una instancia de `LoginResponse`
   /// a partir de un mapa Dart (representación de un objeto JSON).
   /// El método `_$LoginResponseFromJson` será generado automáticamente.
-  factory LoginResponse.fromJson(Map<String, dynamic> json) => _$LoginResponseFromJson(json);
+  factory LoginResponse.fromJson(Map<String, dynamic> json) =>
+      _$LoginResponseFromJson(json);
 
   /// Un método que permite convertir esta instancia de `LoginResponse`
   /// a un mapa Dart (útil si alguna vez necesitas serializarlo de nuevo a JSON,

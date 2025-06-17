@@ -3,15 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'; // Importa este paquete
+import 'package:flutter_localizations/flutter_localizations.dart';
 
-// Importa todas las pantallas que serán la 'home' inicial o dashboards
 import 'package:smged/layout/screens/login_screen.dart';
-import 'package:smged/layout/screens/home_screen.dart'; // Para el rol de Psicólogo
-import 'package:smged/layout/screens/admin_dashboard_screen.dart'; // Para el rol de Administrador
-import 'package:smged/layout/screens/docente_dashboard_screen.dart'; // Para el rol de Docente
-
-// Importa tu archivo de rutas con un alias para evitar conflictos
+import 'package:smged/layout/screens/home_screen.dart';
+import 'package:smged/layout/screens/admin_dashboard_screen.dart';
+import 'package:smged/layout/screens/docente_dashboard_screen.dart';
 import 'package:smged/routes.dart' as app_routes;
 
 void main() {
@@ -85,7 +82,7 @@ class _MyAppState extends State<MyApp> {
     if (_isLoggedIn) {
       switch (_userRole?.toLowerCase()) {
         case 'administrador':
-          return const AdminDashboardScreen();
+          return AdminDashboardScreen(onLogout: _handleLogout);
         case 'psicologo':
           return HomeScreen(onLogout: _handleLogout);
         case 'docente':
@@ -101,34 +98,9 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('[_MyAppState] build() llamado. _isLoggedIn es: $_isLoggedIn, _userRole es: $_userRole');
-
+    debugPrint('[_MyAppState] build() llamado. _isLoggedIn: $_isLoggedIn, _userRole: $_userRole');
     return MaterialApp(
-      title: 'SMGED App',
       debugShowCheckedModeBanner: false,
-      // --- Configuración de localización para español ---
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate, // Proporciona traducciones para widgets Material
-        GlobalWidgetsLocalizations.delegate,  // Proporciona traducciones para widgets genéricos
-        GlobalCupertinoLocalizations.delegate, // Proporciona traducciones para widgets de estilo iOS
-        // Aquí puedes añadir tus propios delegados si tienes traducciones personalizadas
-      ],
-      supportedLocales: const [
-        Locale('en', ''), // Soporte para inglés
-        Locale('es', ''), // Soporte para español
-      ],
-      // Opcional: Si quieres forzar el idioma a español sin depender de la configuración del dispositivo
-      // locale: const Locale('es', ''),
-      //
-      // Opcional: Callback para resolver el locale si el del dispositivo no está en supportedLocales
-      localeResolutionCallback: (locale, supportedLocales) {
-        if (locale != null && supportedLocales.contains(locale)) {
-          return locale;
-        }
-        // Si el dispositivo no tiene un idioma compatible, usa español por defecto
-        return const Locale('es', '');
-      },
-      // --- Fin de configuración de localización ---
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary).copyWith(
           primary: AppColors.primary,
@@ -153,8 +125,15 @@ class _MyAppState extends State<MyApp> {
           cursorColor: AppColors.primary,
         ),
       ),
-      home: _getScreenBasedOnAuthStatus(),
-      routes: app_routes.getApplicationRoutes(),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => _getScreenBasedOnAuthStatus(),
+        '/login': (context) => LoginScreen(onLoginSuccess: _handleLoginSuccess),
+        '/admin': (context) => AdminDashboardScreen(onLogout: _handleLogout),
+        '/home': (context) => HomeScreen(onLogout: _handleLogout),
+        '/docente': (context) => DocenteDashboardScreen(onLogout: _handleLogout),
+        ...app_routes.getApplicationRoutes(),
+      },
     );
   }
 }
