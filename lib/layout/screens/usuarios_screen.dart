@@ -4,6 +4,9 @@ import 'package:smged/api/services/usuarios_service.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'forms/usuario_form_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:smged/config.dart';
 
 class UsuariosScreen extends StatefulWidget {
   const UsuariosScreen({super.key});
@@ -20,13 +23,14 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
   String? _error;
   final TextEditingController _searchController = TextEditingController();
   Set<String> _filtrosRol = {};
-  String? _miCedula;
   int? _miIdUsuario;
+  String? _miCedula;
 
   @override
   void initState() {
     super.initState();
     _fetchMiIdUsuario();
+    _fetchMiCedula();
     _fetchUsuarios();
     _searchController.addListener(_filterUsuarios);
   }
@@ -38,17 +42,17 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchMiCedula() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _miCedula = prefs.getString('cedula_usuario');
-    });
-  }
-
   Future<void> _fetchMiIdUsuario() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _miIdUsuario = prefs.getInt('id_usuario');
+    });
+  }
+
+  Future<void> _fetchMiCedula() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _miCedula = prefs.getString('cedula_usuario');
     });
   }
 
@@ -145,13 +149,85 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
     }
   }
 
-  void _showPasswordDialog(Usuario usuario) {
+  Future<String?> _obtenerPasswordUsuario(int idUsuario) async {
+    final url = Uri.parse('${Config.apiUrl}/usuarios/$idUsuario/password');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['password'];
+    }
+    return null;
+  }
+
+  Future<String?> _pedirPasswordYValidar() async {
+    String? password;
+    final formKey = GlobalKey<FormState>();
+    await showDialog(
+      context: context,
+      builder: (context) {
+        String tempPassword = '';
+        return AlertDialog(
+          title: const Text('Validar Administrador'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Ingresa tu contraseña',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) =>
+                  value == null || value.isEmpty ? 'Campo requerido' : null,
+              onChanged: (value) => tempPassword = value,
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () => Navigator.pop(context),
+            ),
+            TextButton(
+              child: const Text('Validar'),
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  password = tempPassword;
+                  Navigator.pop(context);
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+    return password;
+  }
+
+  Future<bool> _validarPasswordAdmin(String cedula, String password) async {
+    final url = Uri.parse('${Config.apiUrl}/usuarios/login');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'cedula_usuario': cedula, 'password': password}),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['success'] == true;
+    }
+    return false;
+  }
+
+  void _showPasswordDialog(Usuario usuario) async {
+    final password = await _obtenerPasswordUsuario(usuario.idUsuario);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Contraseña del usuario'),
+        title: usuario.idUsuario == _miIdUsuario
+            ? const Text('Tu contraseña')
+            : const Text('Contraseña del usuario'),
         content: SelectableText(
-          'Por seguridad, la contraseña no puede ser mostrada.\nSolicita al usuario que la restablezca si es necesario.',
+          password != null
+              ? password
+              : 'No se pudo obtener la contraseña.',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [

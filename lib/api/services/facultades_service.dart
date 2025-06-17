@@ -53,4 +53,16 @@ class FacultadesService {
       throw Exception('Error al eliminar facultad: ${response.statusCode} - ${response.body}');
     }
   }
+
+  Future<List<Facultad>> obtenerFacultadesConCarreras() async {
+    final url = Uri.parse('${Config.apiUrl}/facultades/carreras');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => Facultad.fromJson(json)).toList();
+    } else {
+      throw Exception('Error al obtener facultades con carreras');
+    }
+  }
 }

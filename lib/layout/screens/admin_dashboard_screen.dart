@@ -3,17 +3,49 @@ import 'package:flutter/material.dart';
 import 'package:smged/layout/widgets/custom_drawer.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/routes.dart';
+import 'package:smged/api/services/usuarios_service.dart';
+import 'package:smged/api/services/facultades_service.dart';
+import 'package:smged/api/models/facultad.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
-  final VoidCallback onLogout;
-
-  const AdminDashboardScreen({super.key, required this.onLogout});
+  final VoidCallback? onLogout;
+  const AdminDashboardScreen({super.key, this.onLogout});
 
   @override
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  int _totalUsuarios = 0;
+  List<Facultad> _facultades = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDashboardData();
+  }
+
+  Future<void> _fetchDashboardData() async {
+    setState(() => _isLoading = true);
+    try {
+      final usuarios = await UsuariosService().obtenerUsuarios();
+      final facultades = await FacultadesService().obtenerFacultadesConCarreras();
+      setState(() {
+        _totalUsuarios = usuarios.length;
+        _facultades = facultades;
+      });
+    } catch (e) {
+      // Manejo de errores simple
+      setState(() {
+        _totalUsuarios = 0;
+        _facultades = [];
+      });
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   void _confirmLogout(BuildContext context) {
     showDialog(
       context: context,
@@ -29,7 +61,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: const Text('Cerrar sesión', style: TextStyle(color: AppColors.error)),
             onPressed: () {
               Navigator.of(context).pop();
-              widget.onLogout();
+              widget.onLogout!();
             },
           ),
         ],
@@ -39,14 +71,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool esEscritorio = MediaQuery.of(context).size.width > 700;
+    final double cardWidth = esEscritorio ? 500 : MediaQuery.of(context).size.width * 0.95;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'ADMINISTRADOR',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Panel de Administración', style: TextStyle(color: Colors.white)),
         backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.textTitle,
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          if (widget.onLogout != null)
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Cerrar sesión',
+              onPressed: widget.onLogout,
+            ),
+        ],
       ),
       drawer: Drawer(
         child: ListView(
@@ -119,20 +159,89 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: const [
-            SizedBox(height: 16),
-          
-            Center(
-              child: Text(
-                'Bienvenido al panel de administración',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Text(
+                        '¡Bienvenido al Panel de Administración!',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      // Card de usuarios activos
+                      Card(
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        child: Container(
+                          width: cardWidth,
+                          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Hay un total de:',
+                                style: TextStyle(fontSize: 18),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                '$_totalUsuarios',
+                                style: const TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                'Usuarios Activos',
+                                style: TextStyle(fontSize: 18),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      // Card de facultades y carreras
+                      Card(
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        child: Container(
+                          width: cardWidth,
+                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ..._facultades.map((facultad) => Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 6.0),
+                                    child: Text(
+                                      'La Facultad de ${facultad.facultad} tiene ${facultad.carreras.length} carreras',
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                  )),
+                              if (_facultades.isEmpty)
+                                const Text(
+                                  'No hay facultades registradas.',
+                                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }
