@@ -89,7 +89,7 @@ class _MyAppState extends State<MyApp> {
         case 'psicologo':
           return HomeScreen(onLogout: _handleLogout);
         case 'docente':
-          return const DocenteDashboardScreen();
+          return DocenteDashboardScreen(onLogout: _handleLogout);
         default:
           debugPrint('[_MyAppState] Rol desconocido: $_userRole. Redirigiendo a LoginScreen por defecto.');
           return LoginScreen(onLoginSuccess: _handleLoginSuccess);
