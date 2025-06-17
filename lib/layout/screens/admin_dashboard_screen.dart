@@ -223,19 +223,74 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              ..._facultades.map((facultad) => Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 6.0),
-                                    child: Text(
-                                      'La Facultad de ${facultad.facultad} tiene ${_cantidadCarrerasPorFacultad(facultad.idFacultad)} carreras',
-                                      style: const TextStyle(fontSize: 16),
-                                      textAlign: TextAlign.start,
-                                    ),
-                                  )),
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 16.0),
+                                child: Text(
+                                  'Información de Facultades',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
                               if (_facultades.isEmpty)
                                 const Text(
                                   'No hay facultades registradas.',
                                   style: TextStyle(fontSize: 16, color: Colors.grey),
                                 ),
+                              ..._facultades.map(
+                                (facultad) => Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                  child: SizedBox(
+                                    width: 400, // Ancho fijo para todas las cards de facultad
+                                    child: Card(
+                                      elevation: 4,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 18),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                const Icon(Icons.account_balance, color: AppColors.primary, size: 22),
+                                                const SizedBox(width: 8),
+                                                const Text(
+                                                  'Facultad: ',
+                                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                ),
+                                                Expanded(
+                                                  child: Text(
+                                                    facultad.facultad,
+                                                    style: const TextStyle(fontSize: 16),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              children: [
+                                                const Icon(Icons.school, color: AppColors.primary, size: 22),
+                                                const SizedBox(width: 8),
+                                                const Text(
+                                                  'Cantidad de carreras: ',
+                                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                ),
+                                                Text(
+                                                  '${_cantidadCarrerasPorFacultad(facultad.idFacultad)}',
+                                                  style: const TextStyle(fontSize: 16),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
