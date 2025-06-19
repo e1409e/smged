@@ -63,7 +63,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             onPressed: () => Navigator.of(context).pop(),
           ),
           TextButton(
-            child: const Text('Cerrar sesión', style: TextStyle(color: AppColors.error)),
+            child: const Text(
+              'Cerrar sesión',
+              style: TextStyle(color: AppColors.error),
+            ),
             onPressed: () {
               Navigator.of(context).pop();
               widget.onLogout!();
@@ -81,30 +84,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final bool esEscritorio = MediaQuery.of(context).size.width > 700;
-    final double cardWidth = esEscritorio ? 500 : MediaQuery.of(context).size.width * 0.95;
+    final double cardWidth = esEscritorio
+        ? 500
+        : MediaQuery.of(context).size.width * 0.95;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('INICIO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'INICIO',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
-
       ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-              ),
+              decoration: const BoxDecoration(color: AppColors.primary),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
                   CircleAvatar(
                     radius: 30,
                     backgroundColor: AppColors.background,
-                    child: Icon(Icons.admin_panel_settings, size: 30, color: AppColors.primary),
+                    child: Icon(
+                      Icons.admin_panel_settings,
+                      size: 30,
+                      color: AppColors.primary,
+                    ),
                   ),
                   SizedBox(height: 10),
                   Text(
@@ -117,10 +126,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   Text(
                     'Panel de control',
-                    style: TextStyle(
-                      color: AppColors.textTitle,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: AppColors.textTitle, fontSize: 14),
                   ),
                 ],
               ),
@@ -152,7 +158,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout, color: AppColors.error),
-              title: const Text('Cerrar Sesión', style: TextStyle(color: AppColors.error)),
+              title: const Text(
+                'Cerrar Sesión',
+                style: TextStyle(color: AppColors.error),
+              ),
               onTap: () {
                 Navigator.pop(context); // Cierra el Drawer
                 _confirmLogout(context); // Muestra el diálogo de confirmación
@@ -166,7 +175,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           : SingleChildScrollView(
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 8),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 32,
+                    horizontal: 8,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -183,10 +195,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       // Card de usuarios activos
                       Card(
                         elevation: 6,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        color: AppColors.background,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
                         child: Container(
                           width: cardWidth,
-                          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 32,
+                            horizontal: 16,
+                          ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -216,12 +234,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       // Card de facultades y carreras
                       Card(
                         elevation: 6,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        color: AppColors.background,
                         child: Container(
                           width: cardWidth,
-                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 24,
+                            horizontal: 16,
+                          ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               const Padding(
                                 padding: EdgeInsets.only(bottom: 16.0),
@@ -237,34 +261,60 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               if (_facultades.isEmpty)
                                 const Text(
                                   'No hay facultades registradas.',
-                                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey,
+                                  ),
                                 ),
                               ..._facultades.map(
                                 (facultad) => Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8.0,
+                                  ),
                                   child: SizedBox(
-                                    width: 400, // Ancho fijo para todas las cards de facultad
+                                    width:
+                                        400, // Ancho fijo para todas las cards de facultad
                                     child: Card(
                                       elevation: 4,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
                                       child: Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 18),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 18,
+                                          horizontal: 18,
+                                        ),
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
                                           children: [
                                             Row(
+                                              crossAxisAlignment: CrossAxisAlignment
+                                                  .baseline, 
+                                              textBaseline: TextBaseline
+                                                  .alphabetic, 
                                               children: [
-                                                const Icon(Icons.account_balance, color: AppColors.primary, size: 22),
+                                                const Icon(
+                                                  Icons.account_balance,
+                                                  color: AppColors.primary,
+                                                  size: 20,
+                                                ),
                                                 const SizedBox(width: 8),
                                                 const Text(
                                                   'Facultad: ',
-                                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                  ),
                                                 ),
                                                 Expanded(
                                                   child: Text(
                                                     facultad.facultad,
-                                                    style: const TextStyle(fontSize: 16),
-                                                    overflow: TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                               ],
@@ -272,15 +322,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                             const SizedBox(height: 8),
                                             Row(
                                               children: [
-                                                const Icon(Icons.school, color: AppColors.primary, size: 22),
+                                                const Icon(
+                                                  Icons.school,
+                                                  color: AppColors.primary,
+                                                  size: 20,
+                                                ),
                                                 const SizedBox(width: 8),
                                                 const Text(
                                                   'Cantidad de carreras: ',
-                                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                  ),
                                                 ),
                                                 Text(
                                                   '${_cantidadCarrerasPorFacultad(facultad.idFacultad)}',
-                                                  style: const TextStyle(fontSize: 16),
+                                                  style: const TextStyle(
+                                                    fontSize: 16,
+                                                  ),
                                                 ),
                                               ],
                                             ),

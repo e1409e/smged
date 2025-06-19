@@ -81,9 +81,6 @@ class CustomDrawer extends StatelessWidget {
             title: const Text('Inicio'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
-              // Si el Dashboard es la ruta '/home' o alguna ruta específica de un rol, puedes navegar:
-              // Navigator.pushReplacementNamed(context, '/home'); // Para ir al home y limpiar el stack
-              // O simplemente cierra el drawer si ya estás en el dashboard principal
             },
           ),
           
@@ -93,8 +90,7 @@ class CustomDrawer extends StatelessWidget {
             title: const Text('Estudiantes'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
-              // Navega a la ruta de la lista de estudiantes usando la constante
-              Navigator.pushNamed(context, app_routes.AppRoutes.estudiantesList); 
+              Navigator.pushNamed(context, app_routes.AppRoutes.estudiantesList);  // Navega a la ruta de la lista de estudiantes usando la constante
             },
           ),
           
@@ -104,30 +100,29 @@ class CustomDrawer extends StatelessWidget {
             title: const Text('Citas'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
-              // Navega a la ruta de la lista de citas usando la constante
-              Navigator.pushNamed(context, app_routes.AppRoutes.citasList); 
+              Navigator.pushNamed(context, app_routes.AppRoutes.citasList); // Navega a la ruta de la lista de citas usando la constante
             },
           ),
           
-          // Elemento del menú: Historial Médico (descomenta y ajusta cuando la ruta esté lista)
+          // Elemento del menú: Historial Médico 
           ListTile(
             leading: const Icon(Icons.history),
             title: const Text('Historial Médico'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
-              // Navigator.pushNamed(context, app_routes.AppRoutes.historialMedico); // Descomentar cuando la ruta esté definida
+              Navigator.pushNamed(context, app_routes.AppRoutes.historialesMedicosList);
             },
           ),
           
-          // Elemento del menú: Configuración (descomenta y ajusta cuando la ruta esté lista)
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Configuración'),
-            onTap: () {
-              Navigator.pop(context); // Cierra el Drawer
-              // Navigator.pushNamed(context, app_routes.AppRoutes.configuracion); // Descomentar cuando la ruta esté definida
-            },
-          ),
+          // // Elemento del menú: 
+          // ListTile(
+          //   leading: const Icon(Icons.settings),
+          //   title: const Text('Configuración'),
+          //   onTap: () {
+          //     Navigator.pop(context); // Cierra el Drawer
+          //     // Navigator.pushNamed(context, app_routes.AppRoutes.configuracion); // Descomentar cuando la ruta esté definida
+          //   },
+          // ),
           
           const Divider(), // Línea divisoria entre opciones
 

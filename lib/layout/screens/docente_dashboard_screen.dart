@@ -17,7 +17,19 @@ class DocenteDashboardScreen extends StatefulWidget {
 class _DocenteDashboardScreenState extends State<DocenteDashboardScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = false;
+  // Añadimos una variable para almacenar el número de estudiantes.
+  int _totalEstudiantes = 0;
+  // Añadimos una variable para controlar la carga inicial del conteo de estudiantes
+  bool _isCountingStudents = true;
 
+  @override
+  void initState() {
+    super.initState();
+    // Llamar a la función para obtener el conteo de estudiantes cuando se inicialice la pantalla
+    _obtenerTotalEstudiantes();
+  }
+
+  /// Función para confirmar el cierre de sesión.
   void _confirmLogout(BuildContext context) {
     showDialog(
       context: context,
@@ -44,6 +56,7 @@ class _DocenteDashboardScreenState extends State<DocenteDashboardScreen> {
     );
   }
 
+  /// Función para buscar estudiantes por un término.
   Future<void> _buscarEstudiante() async {
     final termino = _searchController.text.trim();
     if (termino.isEmpty) return;
@@ -68,6 +81,31 @@ class _DocenteDashboardScreenState extends State<DocenteDashboardScreen> {
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Nueva función para obtener el número total de estudiantes.
+  Future<void> _obtenerTotalEstudiantes() async {
+    setState(() {
+      _isCountingStudents = true; // Indicar que estamos cargando el conteo
+    });
+    try {
+      final estudiantes = await EstudiantesService().obtenerTodosLosEstudiantes();
+      if (mounted) {
+        setState(() {
+          _totalEstudiantes = estudiantes.length; // Actualizar el contador con el número de estudiantes
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al obtener el total de estudiantes: $e')),
+        );
+      }
+    } finally {
+      setState(() {
+        _isCountingStudents = false; // Indica que ha terminado de cargar el conteo
+      });
     }
   }
 
@@ -183,19 +221,21 @@ class _DocenteDashboardScreenState extends State<DocenteDashboardScreen> {
                   ),
                   const SizedBox(height: 24),
                   // Texto centrado, en negrita, itálica y subrayado debajo de la card
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Center(
-                      child: Text(
-                        'Hay un total de ? Estudiantes',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontStyle: FontStyle.italic,
-                          fontWeight: FontWeight.bold,
-                          decoration: TextDecoration.underline,
-                          fontSize: 18,
-                        ),
-                      ),
+                      child: _isCountingStudents
+                          ? const CircularProgressIndicator() // Mostrar un indicador de carga mientras se obtienen los datos
+                          : Text(
+                              'Hay un total de $_totalEstudiantes Estudiantes', // Usamos el valor del estado aquí
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontStyle: FontStyle.italic,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                                fontSize: 18,
+                              ),
+                            ),
                     ),
                   ),
                 ],
