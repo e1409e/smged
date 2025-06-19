@@ -10,8 +10,15 @@ import 'package:smged/routes.dart' as app_routes;
 
 class CustomDrawer extends StatelessWidget {
   final VoidCallback onLogout; // El callback de logout que se ejecuta al confirmar
+  final String userName; // Parámetro para el nombre del usuario
+  final String userRole; // Parámetro para el rol del usuario
 
-  const CustomDrawer({super.key, required this.onLogout});
+  const CustomDrawer({
+    super.key,
+    required this.onLogout,
+    this.userName = 'Usuario', // Valor por defecto en caso de no ser pasado
+    this.userRole = 'Rol Desconocido', // Valor por defecto
+  });
 
   // Función para mostrar el diálogo de confirmación antes de cerrar sesión
   void _confirmLogout(BuildContext context) {
@@ -32,9 +39,9 @@ class CustomDrawer extends StatelessWidget {
               child: const Text('Sí, cerrar sesión'),
               onPressed: () {
                 // Primero cierra el diálogo de confirmación
-                Navigator.of(dialogContext).pop(); 
+                Navigator.of(dialogContext).pop();
                 // Llama directamente al onLogout que desencadena la lógica en MyApp.
-                onLogout(); 
+                onLogout();
               },
             ),
           ],
@@ -64,26 +71,27 @@ class CustomDrawer extends StatelessWidget {
                 ),
                 const SizedBox(height: 10), // Espacio entre el avatar y el texto
                 Text(
-                  'Nombre de Usuario', // Placeholder para el nombre de usuario
+                  userName, // ¡Ahora muestra el nombre de usuario pasado como parámetro!
                   style: TextStyles.title.copyWith(color: AppColors.textTitle), // Estilo de texto del título
                 ),
                 Text(
-                  'Psicólogo', // Placeholder para el rol
+                  userRole, // ¡Ahora muestra el rol pasado como parámetro!
                   style: TextStyles.subtitle.copyWith(color: AppColors.textTitle), // Estilo de texto del subtítulo
                 ),
               ],
             ),
           ),
 
-          // Elemento del menú: Dashboard
+          // Elemento del menú: Dashboard (se mantiene la navegación original)
           ListTile(
             leading: const Icon(Icons.home),
             title: const Text('Inicio'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
+              // No hay cambio en la navegación para "Inicio", se mantiene como estaba.
             },
           ),
-          
+
           // Elemento del menú: Estudiantes
           ListTile(
             leading: const Icon(Icons.school),
@@ -93,7 +101,7 @@ class CustomDrawer extends StatelessWidget {
               Navigator.pushNamed(context, app_routes.AppRoutes.estudiantesList);  // Navega a la ruta de la lista de estudiantes usando la constante
             },
           ),
-          
+
           // Elemento del menú: Citas
           ListTile(
             leading: const Icon(Icons.event),
@@ -103,8 +111,8 @@ class CustomDrawer extends StatelessWidget {
               Navigator.pushNamed(context, app_routes.AppRoutes.citasList); // Navega a la ruta de la lista de citas usando la constante
             },
           ),
-          
-          // Elemento del menú: Historial Médico 
+
+          // Elemento del menú: Historial Médico
           ListTile(
             leading: const Icon(Icons.history),
             title: const Text('Historial Médico'),
@@ -113,8 +121,8 @@ class CustomDrawer extends StatelessWidget {
               Navigator.pushNamed(context, app_routes.AppRoutes.historialesMedicosList);
             },
           ),
-          
-          // // Elemento del menú: 
+
+          // // Elemento del menú: Configuración (comentado, como en tu original)
           // ListTile(
           //   leading: const Icon(Icons.settings),
           //   title: const Text('Configuración'),
@@ -123,7 +131,7 @@ class CustomDrawer extends StatelessWidget {
           //     // Navigator.pushNamed(context, app_routes.AppRoutes.configuracion); // Descomentar cuando la ruta esté definida
           //   },
           // ),
-          
+
           const Divider(), // Línea divisoria entre opciones
 
           // Opción de Cerrar Sesión
@@ -132,9 +140,9 @@ class CustomDrawer extends StatelessWidget {
             title: const Text('Cerrar Sesión', style: TextStyle(color: AppColors.error)), // Texto de logout en color de error
             onTap: () {
               // Cierra el Drawer inmediatamente para una mejor experiencia de usuario
-              Navigator.pop(context); 
+              Navigator.pop(context);
               // Luego, muestra el diálogo de confirmación antes de realmente cerrar la sesión
-              _confirmLogout(context); 
+              _confirmLogout(context);
             },
           ),
         ],

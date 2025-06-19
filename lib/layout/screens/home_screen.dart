@@ -1,12 +1,16 @@
 // lib/layout/screens/home_screen.dart
 import 'package:flutter/material.dart';
-import 'package:smged/api/services/citas_service.dart'; // Mantener por el momento para el conteo de citas
-import 'package:smged/api/models/cita.dart'; // Mantener por el momento para el conteo de citas
+import 'package:smged/api/services/citas_service.dart';
+import 'package:smged/api/models/cita.dart';
 import 'package:smged/layout/widgets/custom_app_bar.dart';
 import 'package:smged/layout/widgets/custom_drawer.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/layout/widgets/info_card.dart';
-import 'package:smged/routes.dart' as app_routes; // ¡Asegúrate de que esta esté importada!
+import 'package:smged/routes.dart' as app_routes;
+import 'package:smged/api/services/auth_service.dart';
+import 'package:smged/api/services/usuarios_service.dart';
+import 'package:smged/api/models/usuario.dart';
+import 'package:collection/collection.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onLogout;
@@ -18,15 +22,58 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Mantengo CitasService y _citasPendientesCount para el AppBar
   final CitasService _citasService = CitasService();
   int _citasPendientesCount = 0;
+
+  String _userName = 'Cargando...';
+  String _userRole = 'Cargando...';
+
+  final AuthService _authService = AuthService();
+  final UsuariosService _usuariosService = UsuariosService();
 
   @override
   void initState() {
     super.initState();
-    // Solo carga el conteo de citas pendientes por ahora
     _fetchCitasPendientesCount();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final int? userId = await _authService.getUserId();
+      if (userId != null) {
+        final List<Usuario> usuarios = await _usuariosService.obtenerUsuarios();
+        // CUIDADO AQUÍ: Asegúrate de que 'idUsuario' coincida con la propiedad en tu modelo Usuario
+        final Usuario? currentUser = usuarios.firstWhereOrNull((user) => user.idUsuario == userId);
+
+        if (currentUser != null && mounted) {
+          setState(() {
+            _userName = currentUser.nombre;
+            _userRole = currentUser.rol;
+          });
+        } else if (mounted) {
+          setState(() {
+            _userName = 'Usuario Desconocido';
+            _userRole = 'Rol Desconocido';
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _userName = 'Invitado';
+            _userRole = 'Visitante';
+          });
+        }
+      }
+    } catch (e) {
+      print('Excepción al cargar datos del usuario: $e');
+      if (mounted) {
+        setState(() {
+          _userName = 'Error';
+          _userRole = 'Error';
+        });
+      }
+    }
   }
 
   Future<void> _fetchCitasPendientesCount() async {
@@ -63,8 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 10),
                     ElevatedButton(
                       onPressed: () {
-                        Navigator.pop(context); // Cierra el Drawer
-                        // Navega a la ruta de la lista de citas usando la constante
+                        Navigator.pop(context);
                         Navigator.pushNamed(
                           context,
                           app_routes.AppRoutes.citasList,
@@ -148,41 +194,39 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       drawer: CustomDrawer(
         onLogout: widget.onLogout,
+        userName: _userName,
+        userRole: _userRole,
       ),
       body: SingleChildScrollView(
-        // Removido RefreshIndicator por ahora, se puede añadir más adelante
         child: Column(
           children: [
-            const SizedBox(height: 16), // Espacio superior
+            const SizedBox(height: 16),
 
-            // Tarjeta: Cantidad de Estudiantes (con valores estáticos por ahora)
             const InfoCard(
               title: 'Cantidad de Estudiantes',
-              value: '120', // Valor estático
+              value: '120',
               icon: Icons.people_alt,
               color: AppColors.primary,
-              onTap: null, // Sin funcionalidad por ahora
+              onTap: null,
             ),
 
-            // Tarjeta: Incidentes en el Mes (con valores estáticos por ahora)
             const InfoCard(
               title: 'Incidentes en el Mes',
-              value: '5', // Valor estático
+              value: '5',
               icon: Icons.warning_amber,
               color: AppColors.warning,
-              onTap: null, // Sin funcionalidad por ahora
+              onTap: null,
             ),
 
-            // Tarjeta: Informar a Estudiante de Cita (con texto estático)
             const InfoCard(
               title: 'Informar a Estudiante de Cita',
-              value: 'Acción Rápida', // Texto estático descriptivo
+              value: 'Acción Rápida',
               icon: Icons.calendar_today,
               color: AppColors.success,
-              onTap: null, // Sin funcionalidad por ahora
+              onTap: null,
             ),
 
-            const SizedBox(height: 20), // Espacio inferior
+            const SizedBox(height: 20),
           ],
         ),
       ),

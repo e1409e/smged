@@ -4,13 +4,13 @@ import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/foundation.dart'; // Necesario para defaultTargetPlatform
 import 'package:collection/collection.dart'; // Importa para firstWhereOrNull
 
-import 'package:smged/api/models/cita.dart'; // Importa el modelo Cita
-import 'package:smged/api/services/citas_service.dart'; // Importa el servicio CitasService
+import 'package:smged/api/models/cita.dart'; 
+import 'package:smged/api/services/citas_service.dart'; 
 import 'package:smged/layout/widgets/custom_data_table.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/layout/widgets/search_bar_widget.dart';
 import 'package:smged/layout/screens/forms/cita_form_screen.dart';
-import 'package:smged/layout/utils/citas_utils.dart'; // Asegúrate de que este import esté correcto
+import 'package:smged/layout/utils/citas_utils.dart'; 
 
 class CitasScreen extends StatefulWidget {
   const CitasScreen({super.key});
