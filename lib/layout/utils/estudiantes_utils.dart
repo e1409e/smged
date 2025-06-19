@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smged/api/models/estudiante.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
-import 'package:smged/layout/reports/estudiantes_report.dart'; // ¡NUEVA IMPORTACIÓN!
+import 'package:smged/layout/reports/estudiantes_report.dart';
+import 'package:smged/routes.dart'; // ¡NUEVA IMPORTACIÓN!
 
 class EstudiantesUtils {
   static void showEstudianteInfoModal(BuildContext context, dynamic item) {
@@ -118,8 +119,8 @@ class EstudiantesUtils {
                 ),
                 const Divider(),
                 _buildInfoRow('Fecha de Registro:', fechaRegistroFormateada),
-
-                // ! INICIO DEL CAMBIO: Botón "Descargar en PDF"
+                const Divider(),
+                // Botón "Descargar en PDF"
                 const SizedBox(height: 20), // Espacio antes del botón
                 Align(
                   alignment: Alignment.center,
@@ -158,7 +159,7 @@ class EstudiantesUtils {
                     icon: const Icon(Icons.download, color: Colors.white),
                     label: const Text('Descargar en PDF', style: TextStyle(color: Colors.white)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary, // O el color que prefieras
+                      backgroundColor: AppColors.error, // O el color que prefieras
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -166,7 +167,30 @@ class EstudiantesUtils {
                     ),
                   ),
                 ),
-                // ! FIN DEL CAMBIO
+                // ¡BOTÓN: Ver historial médico!
+                const SizedBox(height: 15), // Espacio antes del botón
+                Align(
+                  alignment: Alignment.center,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.medical_services),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.background, // O el color que prefieras
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    label: const Text('Ver historial médico'),
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Si es un modal, ciérralo primero
+                      Navigator.of(context).pushNamed(
+                        AppRoutes.historialesMedicosList, // Ajusta el nombre de la ruta según tu proyecto
+                        arguments: estudiante.idEstudiante,
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
               ],
             ),
           ),

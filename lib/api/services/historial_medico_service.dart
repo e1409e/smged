@@ -15,8 +15,21 @@ class HistorialMedicoService {
       List jsonResponse = json.decode(response.body);
       return jsonResponse.map((data) => HistorialMedico.fromJson(data)).toList();
     } else {
-      final errorData = json.decode(response.body);
-      throw Exception('Error al obtener historiales médicos: ${errorData['error'] ?? response.reasonPhrase}');
+      throw Exception('Error al obtener historiales médicos');
+    }
+  }
+
+  /// Obtiene un historial médico por el ID del estudiante.
+  Future<HistorialMedico?> obtenerHistorialPorEstudiante(int idEstudiante) async {
+    final response = await http.get(Uri.parse('$_baseUrl/estudiante/$idEstudiante'));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return HistorialMedico.fromJson(data);
+    } else if (response.statusCode == 404) {
+      return null;
+    } else {
+      throw Exception('Error al obtener historial médico del estudiante');
     }
   }
 

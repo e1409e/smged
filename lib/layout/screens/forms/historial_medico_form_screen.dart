@@ -1,13 +1,13 @@
-// lib/layout/screens/forms/historial_medico_form_screen.dart
 import 'package:flutter/material.dart';
-import 'package:smged/api/models/historial_medico.dart';
-import 'package:smged/api/services/historial_medico_service.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:smged/config.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
+import 'package:smged/api/models/historial_medico.dart';
 
 class HistorialMedicoFormScreen extends StatefulWidget {
-  final HistorialMedico? historialToEdit; // Historial médico para editar (opcional)
-
-  const HistorialMedicoFormScreen({super.key, this.historialToEdit});
+  const HistorialMedicoFormScreen({super.key});
 
   @override
   State<HistorialMedicoFormScreen> createState() => _HistorialMedicoFormScreenState();
@@ -15,261 +15,203 @@ class HistorialMedicoFormScreen extends StatefulWidget {
 
 class _HistorialMedicoFormScreenState extends State<HistorialMedicoFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final HistorialMedicoService _historialMedicoService = HistorialMedicoService();
+  bool _isSaving = false;
+  PlatformFile? _certificadoFile;
+  PlatformFile? _informeFile;
+  PlatformFile? _tratamientoFile;
+  int? _idEstudiante;
 
-  // Controladores para los campos del formulario
-  late TextEditingController _idEstudianteController;
-  late TextEditingController _informeMedicoController;
-  late TextEditingController _tratamientoController;
-  // Modificado para String
-  late TextEditingController _certificadoConapdisController;
-
-  bool _isLoading = false;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    // Inicializar controladores con valores del historial a editar, si existe
-    _idEstudianteController = TextEditingController(
-        text: widget.historialToEdit?.idEstudiante.toString() ?? '');
-    _informeMedicoController = TextEditingController(
-        text: widget.historialToEdit?.informeMedico ?? '');
-    _tratamientoController = TextEditingController(
-        text: widget.historialToEdit?.tratamiento ?? '');
-    // Modificado para String: Si el valor de tu modelo puede ser null, ajusta.
-    // Asumo que si es null, quieres un string vacío.
-    _certificadoConapdisController = TextEditingController(
-        text: widget.historialToEdit?.certificadoConapdis ?? '');
-  }
+  // Agrega estos campos:
+  String? _certificadoUrl;
+  String? _informeUrl;
+  String? _tratamientoUrl;
 
   @override
-  void dispose() {
-    _idEstudianteController.dispose();
-    _informeMedicoController.dispose();
-    _tratamientoController.dispose();
-    _certificadoConapdisController.dispose(); // Disponer del nuevo controlador
-    super.dispose();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map) {
+      _idEstudiante = args['idEstudiante'] as int?;
+      final historial = args['historial'] as HistorialMedico?;
+      if (historial != null) {
+        _certificadoUrl = historial.certificadoConapdis;
+        _informeUrl = historial.informeMedico;
+        _tratamientoUrl = historial.tratamiento;
+      }
+    } else if (args is int) {
+      _idEstudiante = args;
+    }
   }
 
-  Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
+  Future<void> _pickFile(Function(PlatformFile) onPicked) async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    if (result != null && result.files.single.path != null) {
+      onPicked(result.files.single);
+    }
+  }
 
-      try {
-        final int idEstudiante = int.parse(_idEstudianteController.text);
-        final String informeMedico = _informeMedicoController.text;
-        final String tratamiento = _tratamientoController.text;
-        // Obtener el valor del campo de texto para certificadoConapdis
-        final String certificadoConapdis = _certificadoConapdisController.text;
+  Future<void> _guardarHistorial() async {
+    if (_idEstudiante == null) return;
+    setState(() => _isSaving = true);
 
-        if (widget.historialToEdit == null) {
-          // Crear nuevo historial médico
-          final newHistorial = HistorialMedico(
-            idHistorialMedico: 0, // El ID se generará en el backend
-            idEstudiante: idEstudiante,
-            certificadoConapdis: certificadoConapdis, // Ahora es un String
-            informeMedico: informeMedico,
-            tratamiento: tratamiento,
-            fechaCreacion: DateTime.now(), // Se establecerá en el backend
-            fechaActualizacion: DateTime.now(), // Se establecerá en el backend
-          );
+    try {
+      final uri = Uri.parse('${Config.apiUrl}/historial_medico');
+      final request = http.MultipartRequest('POST', uri);
 
-          await _historialMedicoService.crearHistorialMedico(newHistorial);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Historial médico creado exitosamente.'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            Navigator.of(context).pop(true); // Indica éxito
-          }
-        } else {
-          // Actualizar historial médico existente
-          final updatedHistorial = HistorialMedico(
-            idHistorialMedico: widget.historialToEdit!.idHistorialMedico, // Mantener el ID existente
-            idEstudiante: idEstudiante,
-            certificadoConapdis: certificadoConapdis, // Ahora es un String
-            informeMedico: informeMedico,
-            tratamiento: tratamiento,
-            fechaCreacion: widget.historialToEdit!.fechaCreacion, // Mantener la fecha de creación original
-            fechaActualizacion: DateTime.now(), // Actualizar la fecha de actualización
-          );
+      request.fields['id_estudiante'] = _idEstudiante.toString();
 
-          await _historialMedicoService.editarHistorialMedico(
-              widget.historialToEdit!.idHistorialMedico, updatedHistorial);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Historial médico actualizado exitosamente.'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            Navigator.of(context).pop(true); // Indica éxito
-          }
-        }
-      } catch (e) {
+      if (_certificadoFile != null && _certificadoFile!.path != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'certificado_conapdis',
+          _certificadoFile!.path!,
+          filename: _certificadoFile!.name,
+        ));
+      }
+      if (_informeFile != null && _informeFile!.path != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'informe_medico',
+          _informeFile!.path!,
+          filename: _informeFile!.name,
+        ));
+      }
+      if (_tratamientoFile != null && _tratamientoFile!.path != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'tratamiento',
+          _tratamientoFile!.path!,
+          filename: _tratamientoFile!.name,
+        ));
+      }
+
+      final response = await request.send();
+
+      if (response.statusCode == 201) {
         if (mounted) {
-          setState(() {
-            _errorMessage = 'Error: ${e.toString().replaceFirst('Exception: ', '')}';
-          });
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_errorMessage!),
-              backgroundColor: AppColors.error,
-            ),
+            const SnackBar(content: Text('Historial médico guardado exitosamente')),
           );
+          Navigator.of(context).pop();
         }
-      } finally {
+      } else {
+        final respStr = await response.stream.bytesToString();
         if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error al guardar: $respStr')),
+          );
         }
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isSaving = false);
     }
+  }
+
+  Widget _buildArchivoField({
+    required String label,
+    required PlatformFile? file,
+    required VoidCallback onPick,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                file?.name ?? 'No seleccionado',
+                style: TextStyle(
+                  color: file != null ? Colors.black87 : Colors.grey,
+                  fontStyle: file != null ? FontStyle.normal : FontStyle.italic,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.upload_file),
+              label: const Text('Seleccionar'),
+              onPressed: onPick,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool esEscritorio = MediaQuery.of(context).size.width > 700;
+    final double cardWidth = esEscritorio ? 500 : MediaQuery.of(context).size.width * 0.95;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.historialToEdit == null
-              ? 'Crear Historial Médico'
-              : 'Editar Historial Médico',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Nuevo Historial Médico', style: TextStyle(color: Colors.white)),
         backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.textTitle,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              // Campo ID Estudiante
-              TextFormField(
-                controller: _idEstudianteController,
-                decoration: InputDecoration(
-                  labelText: 'ID del Estudiante',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  prefixIcon: const Icon(Icons.person),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, ingrese el ID del estudiante.';
-                  }
-                  if (int.tryParse(value) == null) {
-                    return 'Por favor, ingrese un número válido.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16.0),
-
-              // Campo Informe Médico
-              TextFormField(
-                controller: _informeMedicoController,
-                decoration: InputDecoration(
-                  labelText: 'Informe Médico',
-                  alignLabelWithHint: true, // Alinea la etiqueta al principio para multilínea
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  prefixIcon: const Icon(Icons.description),
-                ),
-                maxLines: 5, // Permite múltiples líneas
-                keyboardType: TextInputType.multiline,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, ingrese el informe médico.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16.0),
-
-              // Campo Tratamiento
-              TextFormField(
-                controller: _tratamientoController,
-                decoration: InputDecoration(
-                  labelText: 'Tratamiento',
-                  alignLabelWithHint: true,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  prefixIcon: const Icon(Icons.healing),
-                ),
-                maxLines: 5, // Permite múltiples líneas
-                keyboardType: TextInputType.multiline,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, ingrese el tratamiento.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16.0),
-
-              // --- Campo de texto para Certificado CONAPDIS (antes Checkbox) ---
-              TextFormField(
-                controller: _certificadoConapdisController,
-                decoration: InputDecoration(
-                  labelText: 'Certificado CONAPDIS',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  prefixIcon: const Icon(Icons.assignment), // Icono más adecuado
-                  hintText: 'Ej: Sí, No, o número de certificado', // Sugerencia para el usuario
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, ingrese el estado o número de certificado CONAPDIS.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24.0),
-
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                      onPressed: _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.textTitle,
-                        padding: const EdgeInsets.symmetric(vertical: 15.0),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10.0),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: cardWidth),
+          child: Card(
+            elevation: 4,
+            margin: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildArchivoField(
+                      label: 'Certificado CONAPDIS',
+                      file: _certificadoFile,
+                      onPick: () => _pickFile((file) => setState(() => _certificadoFile = file)),
+                    ),
+                    _buildArchivoField(
+                      label: 'Informe Médico',
+                      file: _informeFile,
+                      onPick: () => _pickFile((file) => setState(() => _informeFile = file)),
+                    ),
+                    _buildArchivoField(
+                      label: 'Tratamiento',
+                      file: _tratamientoFile,
+                      onPick: () => _pickFile((file) => setState(() => _tratamientoFile = file)),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.save),
+                        label: _isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text('Guardar'),
+                        onPressed: _isSaving ? null : _guardarHistorial,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
                         ),
                       ),
-                      child: Text(
-                        widget.historialToEdit == null
-                            ? 'Crear Historial Médico'
-                            : 'Guardar Cambios',
-                        style: const TextStyle(fontSize: 18),
-                      ),
                     ),
-              if (_errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16.0),
-                  child: Text(
-                    _errorMessage!,
-                    style: const TextStyle(color: AppColors.error, fontSize: 14),
-                    textAlign: TextAlign.center,
-                  ),
+                  ],
                 ),
-            ],
+              ),
+            ),
           ),
         ),
       ),

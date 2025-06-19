@@ -113,14 +113,14 @@ class CustomDrawer extends StatelessWidget {
           ),
 
           // Elemento del menú: Historial Médico
-          ListTile(
-            leading: const Icon(Icons.history),
-            title: const Text('Historial Médico'),
-            onTap: () {
-              Navigator.pop(context); // Cierra el Drawer
-              Navigator.pushNamed(context, app_routes.AppRoutes.historialesMedicosList);
-            },
-          ),
+          // ListTile(
+          //   leading: const Icon(Icons.history),
+          //   title: const Text('Historial Médico'),
+          //   onTap: () {
+          //     Navigator.pop(context); // Cierra el Drawer
+          //     Navigator.pushNamed(context, app_routes.AppRoutes.historialesMedicosList);
+          //   },
+          // ),
 
           // // Elemento del menú: Configuración (comentado, como en tu original)
           // ListTile(
