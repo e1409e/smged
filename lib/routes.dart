@@ -10,6 +10,8 @@ import 'package:smged/layout/screens/carreras_screen.dart';
 import 'package:smged/layout/screens/usuarios_screen.dart'; 
 import 'package:smged/layout/screens/historial_medico_screen.dart';
 import 'package:smged/layout/screens/forms/historial_medico_form_screen.dart';
+import 'package:smged/layout/screens/incidencias_screen.dart'; 
+import 'package:smged/layout/screens/forms/incidencias_form_screen.dart'; // Agrega este import
 
 // Clase que importa las rutas
 class AppRoutes {
@@ -28,6 +30,9 @@ class AppRoutes {
   // rutas historial médico
    static const String historialesMedicosList = '/historialesMedicos';
     static const String historialMedicoForm = '/historialMedicoForm';
+  // rutas incidencias
+  static const String incidenciasList = '/incidencias'; 
+  static const String incidenciasForm = '/incidenciasForm'; // <--- Agrega esta línea
 }
 
 // Esta función solo devuelve un mapa de rutas para navegación INTERNA.
@@ -61,5 +66,8 @@ Map<String, WidgetBuilder> getApplicationRoutes() {
     AppRoutes.historialMedicoForm: (BuildContext context) =>
         const HistorialMedicoFormScreen(),
 
+    // Rutas de Incidencias
+    AppRoutes.incidenciasList: (BuildContext context) => const IncidenciasScreen(), 
+    AppRoutes.incidenciasForm: (BuildContext context) => const IncidenciasFormScreen(), // <--- Agrega esta línea
   };
 }

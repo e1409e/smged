@@ -8,6 +8,8 @@ class InfoCard extends StatelessWidget {
   final IconData? icon;
   final Color? color;
   final VoidCallback? onTap;
+  final Widget? extraContent;
+  final Widget? iconWidget;
 
   const InfoCard({
     super.key,
@@ -16,6 +18,8 @@ class InfoCard extends StatelessWidget {
     this.icon,
     this.color,
     this.onTap,
+    this.extraContent,
+    this.iconWidget,
   });
 
   @override
@@ -30,46 +34,49 @@ class InfoCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12.0),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
+          padding: const EdgeInsets.all(18),
+          child: Column(
             children: [
-              if (icon != null)
-                Icon(
-                  icon,
-                  size: 40.0,
-                  color: color ?? AppColors.primary,
-                ),
-              if (icon != null) const SizedBox(width: 16.0),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16.0,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
+              Row(
+                children: [
+                  if (iconWidget != null)
+                    iconWidget!
+                  else if (icon != null)
+                    Icon(icon, size: 40.0, color: color ?? AppColors.primary),
+                  if (icon != null || iconWidget != null) const SizedBox(width: 16.0),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 8.0),
+                        Text(
+                          value,
+                          style: TextStyle(
+                            fontSize: 28.0,
+                            fontWeight: FontWeight.bold,
+                            color: color ?? AppColors.primary,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8.0),
-                    Text(
-                      value,
-                      style: TextStyle(
-                        fontSize: 28.0,
-                        fontWeight: FontWeight.bold,
-                        color: color ?? AppColors.primary,
-                      ),
+                  ),
+                  if (onTap != null)
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.grey,
+                      size: 20,
                     ),
-                  ],
-                ),
+                ],
               ),
-              if (onTap != null)
-                const Icon(
-                  Icons.arrow_forward_ios,
-                  color: Colors.grey,
-                  size: 20,
-                ),
+              if (extraContent != null) extraContent!,
             ],
           ),
         ),

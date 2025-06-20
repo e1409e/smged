@@ -39,16 +39,16 @@ class _DatePickerFormFieldState extends State<DatePickerFormField> {
   @override
   void initState() {
     super.initState();
-    _selectedDate = widget.initialDate;
+    // Si no hay fecha inicial, usa la fecha de hoy
+    _selectedDate = widget.initialDate ?? DateTime.now();
     _updateTextController();
   }
 
   @override
   void didUpdateWidget(covariant DatePickerFormField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Actualiza el estado y el controlador si la fecha inicial cambia desde afuera
     if (widget.initialDate != oldWidget.initialDate) {
-      _selectedDate = widget.initialDate;
+      _selectedDate = widget.initialDate ?? DateTime.now();
       _updateTextController();
     }
   }

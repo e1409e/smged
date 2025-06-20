@@ -16,8 +16,9 @@ class CustomDropdownButton<T> extends StatefulWidget {
     required this.value,
     required this.onChanged,
     this.validator,
-    required this.itemDisplayText, // Función para obtener el texto a mostrar en la lista
-    required this.itemSearchFilter, // Función para filtrar elementos en la búsqueda
+    required this.itemDisplayText,
+    required this.itemSearchFilter,
+    this.enabled = true, // <-- NUEVO: permite deshabilitar el campo
   });
 
   final String labelText;
@@ -29,13 +30,9 @@ class CustomDropdownButton<T> extends StatefulWidget {
   final T? value;
   final ValueChanged<T?> onChanged;
   final String? Function(T?)? validator;
-
-  // Una función que toma un objeto T y devuelve la String que se mostrará en el DropdownMenuItem
   final String Function(T) itemDisplayText;
-
-  // Una función que toma un objeto T y un String de búsqueda,
-  // y devuelve true si el objeto coincide con la búsqueda.
   final bool Function(T, String) itemSearchFilter;
+  final bool enabled; // <-- NUEVO
 
   @override
   State<CustomDropdownButton<T>> createState() => _CustomDropdownButtonState<T>();
@@ -180,21 +177,26 @@ class _CustomDropdownButtonState<T> extends State<CustomDropdownButton<T>> {
         textAlign: TextAlign.center,
       );
     } else {
-      // Usamos un GestureDetector o un TextFormField con onTap
-      return TextFormField(
-        readOnly: true, // No permitir escribir directamente en el campo
-        controller: TextEditingController(
-          text: _selectedValue != null ? widget.itemDisplayText(_selectedValue!) : '',
+      return AbsorbPointer(
+        absorbing: !widget.enabled,
+        child: TextFormField(
+          readOnly: true, // No permitir escribir directamente en el campo
+          controller: TextEditingController(
+            text: _selectedValue != null ? widget.itemDisplayText(_selectedValue!) : '',
+          ),
+          decoration: InputDecoration(
+            labelText: widget.labelText,
+            hintText: widget.hintText,
+            border: const OutlineInputBorder(),
+            prefixIcon: widget.prefixIcon != null ? Icon(widget.prefixIcon) : null,
+            suffixIcon: const Icon(Icons.arrow_drop_down), // Ícono de dropdown
+            // Si está deshabilitado, cambia el color de fondo
+            filled: !widget.enabled,
+            fillColor: !widget.enabled ? Colors.grey[200] : null,
+          ),
+          onTap: widget.enabled ? () => _showSelectionDialog(context) : null,
+          validator: (text) => _validate(), // Llama a la validación personalizada
         ),
-        decoration: InputDecoration(
-          labelText: widget.labelText,
-          hintText: widget.hintText,
-          border: const OutlineInputBorder(),
-          prefixIcon: widget.prefixIcon != null ? Icon(widget.prefixIcon) : null,
-          suffixIcon: const Icon(Icons.arrow_drop_down), // Ícono de dropdown
-        ),
-        onTap: () => _showSelectionDialog(context),
-        validator: (text) => _validate(), // Llama a la validación personalizada
       );
     }
   }

@@ -11,6 +11,12 @@ import 'package:smged/api/services/auth_service.dart';
 import 'package:smged/api/services/usuarios_service.dart';
 import 'package:smged/api/models/usuario.dart';
 import 'package:collection/collection.dart';
+import 'package:smged/api/models/incidencia.dart';
+import 'package:smged/api/services/incidencias_service.dart';
+import 'package:smged/api/services/estudiantes_service.dart';
+import 'package:smged/api/models/estudiante.dart';
+import 'package:percent_indicator/circular_percent_indicator.dart';
+import 'package:smged/main.dart'; 
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onLogout;
@@ -21,20 +27,28 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with RouteAware {
   final CitasService _citasService = CitasService();
+  final EstudiantesService _estudiantesService = EstudiantesService();
   int _citasPendientesCount = 0;
+  int _totalEstudiantes = 0;
 
   String _userName = 'Cargando...';
   String _userRole = 'Cargando...';
 
   final AuthService _authService = AuthService();
   final UsuariosService _usuariosService = UsuariosService();
+  final IncidenciasService _incidenciasService = IncidenciasService();
+  int _incidenciasMesCount = 0;
+  int _conapdisCount = 0;
 
   @override
   void initState() {
     super.initState();
     _fetchCitasPendientesCount();
+    _fetchIncidenciasMesCount();
+    _fetchTotalEstudiantes();
+    _fetchConapdisCount(); // <--- Agrega esta línea
     _loadUserData();
   }
 
@@ -43,7 +57,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final int? userId = await _authService.getUserId();
       if (userId != null) {
         final List<Usuario> usuarios = await _usuariosService.obtenerUsuarios();
-        // CUIDADO AQUÍ: Asegúrate de que 'idUsuario' coincida con la propiedad en tu modelo Usuario
         final Usuario? currentUser = usuarios.firstWhereOrNull((user) => user.idUsuario == userId);
 
         if (currentUser != null && mounted) {
@@ -87,6 +100,58 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       print('Error al cargar el conteo de citas pendientes: $e');
+    }
+  }
+
+  Future<void> _fetchIncidenciasMesCount() async {
+    try {
+      final List<Incidencia> incidencias = await _incidenciasService.obtenerIncidencias();
+      final now = DateTime.now();
+      final count = incidencias.where((inc) {
+        // Maneja el formato de fecha: puede ser '2025-06-20T04:00:00.000Z' o similar
+        DateTime? fecha;
+        try {
+          fecha = DateTime.parse(inc.fechaIncidente);
+        } catch (_) {
+          return false;
+        }
+        return fecha.year == now.year && fecha.month == now.month;
+      }).length;
+      if (mounted) {
+        setState(() {
+          _incidenciasMesCount = count;
+        });
+      }
+    } catch (e) {
+      print('Error al cargar el conteo de incidencias del mes: $e');
+    }
+  }
+
+  Future<void> _fetchTotalEstudiantes() async {
+    try {
+      final List<Estudiante> estudiantes = await _estudiantesService.obtenerTodosLosEstudiantes();
+      if (mounted) {
+        setState(() {
+          _totalEstudiantes = estudiantes.length;
+        });
+      }
+    } catch (e) {
+      print('Error al cargar el conteo de estudiantes: $e');
+    }
+  }
+
+  Future<void> _fetchConapdisCount() async {
+    try {
+      final List<Estudiante> estudiantes = await _estudiantesService.obtenerTodosLosEstudiantes();
+      // El modelo Estudiante usa bool? para poseeConapdis, así que compara con true
+      final int conapdis = estudiantes.where((e) => e.poseeConapdis == true).length;
+      if (mounted) {
+        setState(() {
+          _conapdisCount = conapdis;
+        });
+      }
+    } catch (e) {
+      print('Error al cargar el conteo de estudiantes con CONAPDIS: $e');
     }
   }
 
@@ -147,6 +212,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool esEscritorio = MediaQuery.of(context).size.width > 700;
+    final double cardWidth = esEscritorio ? 650 : double.infinity;
+
     return Scaffold(
       appBar: CustomAppBar(
         title: 'INICIO',
@@ -197,39 +265,120 @@ class _HomeScreenState extends State<HomeScreen> {
         userName: _userName,
         userRole: _userRole,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-
-            const InfoCard(
-              title: 'Cantidad de Estudiantes',
-              value: '120',
-              icon: Icons.people_alt,
-              color: AppColors.primary,
-              onTap: null,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: cardWidth,
+            maxHeight: esEscritorio ? 600 : 800,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                SizedBox(height: esEscritorio ? 24 : 8),
+                Text(
+                  'Bienvenido al panel de control, $_userName',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 18),
+                Card(
+                  elevation: 6,
+                  color: Colors.white70,
+                  margin: const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+                    child: Column(
+                      children: [
+                        InfoCard(
+                          title: 'Cantidad de Estudiantes',
+                          value: '$_totalEstudiantes',
+                          icon: Icons.people_alt,
+                          color: AppColors.primary,
+                          onTap: null,
+                        ),
+                        // Card de CONAPDIS con indicador y porcentaje al lado
+                        InfoCard(
+                          title: 'Estudiantes registrados en el CONAPDIS',
+                          value: _totalEstudiantes > 0
+                              ? '$_conapdisCount / $_totalEstudiantes   (${((_conapdisCount / _totalEstudiantes) * 100).toStringAsFixed(1)}%)'
+                              : '$_conapdisCount / $_totalEstudiantes',
+                          iconWidget: _totalEstudiantes > 0
+                              ? CircularPercentIndicator(
+                                  radius: 28,
+                                  lineWidth: 8,
+                                  percent: _conapdisCount / _totalEstudiantes,
+                                  center: const Icon(Icons.verified_user, color: AppColors.info, size: 22),
+                                  progressColor: AppColors.primary,
+                                  backgroundColor: Colors.grey[300]!,
+                                  animation: true,
+                                )
+                              : const Icon(Icons.verified_user, color: AppColors.info, size: 32),
+                          color: AppColors.info,
+                          onTap: null,
+                          extraContent: null,
+                        ),
+                        if (_totalEstudiantes > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 18.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              
+                            ),
+                          ),
+                        InfoCard(
+                          title: 'Incidentes en el Mes',
+                          value: '$_incidenciasMesCount',
+                          icon: Icons.warning_amber,
+                          color: AppColors.warning,
+                          onTap: () {
+                            Navigator.pushNamed(context, app_routes.AppRoutes.incidenciasList);
+                          },
+                        ),
+                        const InfoCard(
+                          title: 'Informar a Estudiante de Cita',
+                          value: 'Acción Rápida',
+                          icon: Icons.calendar_today,
+                          color: AppColors.success,
+                          onTap: null,
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-
-            const InfoCard(
-              title: 'Incidentes en el Mes',
-              value: '5',
-              icon: Icons.warning_amber,
-              color: AppColors.warning,
-              onTap: null,
-            ),
-
-            const InfoCard(
-              title: 'Informar a Estudiante de Cita',
-              value: 'Acción Rápida',
-              icon: Icons.calendar_today,
-              color: AppColors.success,
-              onTap: null,
-            ),
-
-            const SizedBox(height: 20),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Se llama cuando regresas a HomeScreen
+    _fetchCitasPendientesCount();
+    _fetchIncidenciasMesCount();
+    _fetchTotalEstudiantes();
+    _fetchConapdisCount();
+    _loadUserData();
+    super.didPopNext();
   }
 }

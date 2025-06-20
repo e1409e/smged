@@ -134,6 +134,9 @@ class _MyAppState extends State<MyApp> {
         '/docente': (context) => DocenteDashboardScreen(onLogout: _handleLogout),
         ...app_routes.getApplicationRoutes(),
       },
+      navigatorObservers: [routeObserver],
     );
   }
 }
+
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
