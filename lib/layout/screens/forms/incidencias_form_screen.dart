@@ -23,6 +23,8 @@ class IncidenciasFormScreen extends StatefulWidget {
 }
 
 class _IncidenciasFormScreenState extends State<IncidenciasFormScreen> {
+  Incidencia? _incidenciaToEdit; // <--- NUEVO
+
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _descripcionController = TextEditingController();
@@ -68,17 +70,17 @@ class _IncidenciasFormScreenState extends State<IncidenciasFormScreen> {
         incidenciaToEdit = args;
       }
       _idEstudianteFijoArg = idEstudianteFijo;
+      _incidenciaToEdit = incidenciaToEdit; // <--- NUEVO
 
-      if (incidenciaToEdit != null) {
-        _descripcionController.text = incidenciaToEdit.descripcionIncidente;
-        _acuerdosController.text = incidenciaToEdit.acuerdos ?? '';
-        _observacionesController.text = incidenciaToEdit.observaciones ?? '';
-        _lugarController.text = incidenciaToEdit.lugarIncidente ?? '';
+      if (_incidenciaToEdit != null) {
+        _descripcionController.text = _incidenciaToEdit!.descripcionIncidente;
+        _acuerdosController.text = _incidenciaToEdit!.acuerdos ?? '';
+        _observacionesController.text = _incidenciaToEdit!.observaciones ?? '';
+        _lugarController.text = _incidenciaToEdit!.lugarIncidente ?? '';
         _fechaIncidente =
-            DateTime.tryParse(incidenciaToEdit.fechaIncidente) ??
-            DateTime.now();
-        if (incidenciaToEdit.horaIncidente.isNotEmpty) {
-          final parts = incidenciaToEdit.horaIncidente.split(':');
+            DateTime.tryParse(_incidenciaToEdit!.fechaIncidente) ?? DateTime.now();
+        if (_incidenciaToEdit!.horaIncidente.isNotEmpty) {
+          final parts = _incidenciaToEdit!.horaIncidente.split(':');
           if (parts.length >= 2) {
             _horaIncidente = TimeOfDay(
               hour: int.tryParse(parts[0]) ?? 0,
@@ -128,18 +130,14 @@ class _IncidenciasFormScreenState extends State<IncidenciasFormScreen> {
   }
 
   void _setInitialEstudianteSelection() {
-    // Si es edición, selecciona el estudiante de la incidencia
-    if (widget.incidenciaToEdit != null &&
-        widget.incidenciaToEdit!.idEstudiante != null) {
+    if (_incidenciaToEdit != null && _incidenciaToEdit!.idEstudiante != null) {
       final initialEstudiante = _estudiantes.firstWhereOrNull(
-        (e) => e.idEstudiante == widget.incidenciaToEdit!.idEstudiante,
+        (e) => e.idEstudiante == _incidenciaToEdit!.idEstudiante,
       );
       if (initialEstudiante != null) {
         _selectedEstudiante = initialEstudiante;
       }
-    }
-    // Si es creación y hay idEstudianteFijo (por constructor o argumento), selecciona ese estudiante
-    else if (_idEstudianteFijoArg != null) {
+    } else if (_idEstudianteFijoArg != null) {
       final estudianteFijo = _estudiantes.firstWhereOrNull(
         (e) => e.idEstudiante == _idEstudianteFijoArg,
       );
@@ -193,25 +191,19 @@ class _IncidenciasFormScreenState extends State<IncidenciasFormScreen> {
 
     try {
       final incidenciaPayload = Incidencia(
-        idIncidencia: widget.incidenciaToEdit?.idIncidencia,
+        idIncidencia: _incidenciaToEdit?.idIncidencia,
         idEstudiante: _selectedEstudiante!.idEstudiante!,
         descripcionIncidente: _descripcionController.text,
         acuerdos: _acuerdosController.text,
         observaciones: _observacionesController.text,
         lugarIncidente: _lugarController.text,
-        fechaIncidente: _fechaIncidente!
-            .toIso8601String()
-            .split('T')
-            .first, // YYYY-MM-DD
-        horaIncidente: _formatTimeOfDay(_horaIncidente!), // HH:mm
+        fechaIncidente: _fechaIncidente!.toIso8601String().split('T').first,
+        horaIncidente: _formatTimeOfDay(_horaIncidente!),
       );
 
-      final horaFormateada = _formatTimeOfDay(_horaIncidente!);
-      print('Hora enviada al backend: $horaFormateada');
-
-      if (widget.incidenciaToEdit != null) {
+      if (_incidenciaToEdit != null) {
         await _incidenciasService.editarIncidencia(
-          widget.incidenciaToEdit!.idIncidencia!,
+          _incidenciaToEdit!.idIncidencia!,
           incidenciaPayload,
         );
       } else {
@@ -222,7 +214,7 @@ class _IncidenciasFormScreenState extends State<IncidenciasFormScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            widget.incidenciaToEdit == null
+            _incidenciaToEdit == null
                 ? 'Incidencia registrada exitosamente.'
                 : 'Incidencia actualizada exitosamente.',
           ),
@@ -250,7 +242,7 @@ class _IncidenciasFormScreenState extends State<IncidenciasFormScreen> {
 
     // Determina si el campo de estudiante debe estar deshabilitado
     final bool estudianteFieldDisabled =
-        (_idEstudianteFijoArg != null) || (widget.incidenciaToEdit != null);
+        (_idEstudianteFijoArg != null) || (_incidenciaToEdit != null);
 
     return Scaffold(
       appBar: AppBar(

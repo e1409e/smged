@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smged/api/models/incidencia.dart';
 import 'package:smged/api/services/incidencias_service.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
+import 'package:smged/routes.dart';
 
 class IncidenciasScreen extends StatefulWidget {
   const IncidenciasScreen({super.key});
@@ -109,6 +110,25 @@ class _IncidenciasScreenState extends State<IncidenciasScreen> {
     }
   }
 
+  void _handleEditIncidencia(Incidencia incidencia) async {
+    final result = await Navigator.of(context).pushNamed(
+      AppRoutes.incidenciasForm,
+      arguments: incidencia, // Pasa la incidencia a editar
+    );
+    if (result == true) {
+      _fetchIncidencias(); // Recarga la lista después de editar
+    }
+  }
+
+  void _handleAddIncidencia() async {
+    final result = await Navigator.of(context).pushNamed(
+      AppRoutes.incidenciasForm,
+    );
+    if (result == true) {
+      _fetchIncidencias(); // Recarga la lista después de crear
+    }
+  }
+
   Widget _buildIncidenciaCard(Incidencia incidencia, double cardWidth) {
     return Center(
       child: ConstrainedBox(
@@ -138,7 +158,7 @@ class _IncidenciasScreenState extends State<IncidenciasScreen> {
                 Text('Observaciones: ${incidencia.observaciones}'),
                 const SizedBox(height: 18),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center, // <-- Cambia a center
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     ElevatedButton.icon(
                       icon: const Icon(Icons.edit),
@@ -147,9 +167,7 @@ class _IncidenciasScreenState extends State<IncidenciasScreen> {
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                       ),
-                      onPressed: () {
-                        // TODO: Navegar al formulario de edición de incidencia
-                      },
+                      onPressed: () => _handleEditIncidencia(incidencia),
                     ),
                     const SizedBox(width: 16),
                     ElevatedButton.icon(
@@ -191,13 +209,7 @@ class _IncidenciasScreenState extends State<IncidenciasScreen> {
             tooltip: 'Refrescar',
             onPressed: _fetchIncidencias,
           ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              // TODO: Navegar al formulario de agregar incidencia
-            },
-            tooltip: 'Añadir nueva incidencia',
-          ),
+          // Puedes quitar este IconButton si solo quieres el FAB
         ],
       ),
       body: _isLoading
@@ -255,6 +267,14 @@ class _IncidenciasScreenState extends State<IncidenciasScreen> {
                     ],
                   ),
                 ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _handleAddIncidencia,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(''),
+        backgroundColor: Colors.orange,
+        foregroundColor: Colors.white,
+        elevation: 4,
+      ),
     );
   }
 }

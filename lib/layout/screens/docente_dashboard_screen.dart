@@ -125,6 +125,29 @@ class _DocenteDashboardScreenState extends State<DocenteDashboardScreen> {
         ),
         backgroundColor: AppColors.primary,
         actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.lightBlue, // Fondo naranja
+                borderRadius: BorderRadius.circular(16),
+                // boxShadow: [
+                //   BoxShadow(
+                //     color: Colors.white.withOpacity(0.5),
+                //     blurRadius: 16,
+                //     offset: const Offset(0, 2),
+                //   ),
+                // ],
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.warning_amber, color: Colors.white),
+                tooltip: 'Incidentes',
+                onPressed: () {
+                  Navigator.of(context).pushNamed('/incidencias');
+                },
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: 'Cerrar sesión',
@@ -238,6 +261,29 @@ class _DocenteDashboardScreenState extends State<DocenteDashboardScreen> {
                             ),
                     ),
                   ),
+                  // Botón naranja para navegar a incidencias
+                  const SizedBox(height: 24),
+                  // SizedBox(
+                  //   width: cardWidth,
+                  //   child: ElevatedButton.icon(
+                  //     icon: const Icon(Icons.warning_amber, color: Colors.white),
+                  //     label: const Text('Incidentes'),
+                  //     style: ElevatedButton.styleFrom(
+                  //       backgroundColor: Colors.orange,
+                  //       foregroundColor: Colors.white,
+                  //       padding: const EdgeInsets.symmetric(vertical: 16),
+                  //       textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(10),
+                  //       ),
+                  //     ),
+                  //     onPressed: () {
+                  //       Navigator.of(context).pushNamed('/incidencias');
+                  //       // O usa AppRoutes.incidenciasList si tienes rutas nombradas así:
+                  //       // Navigator.of(context).pushNamed(AppRoutes.incidenciasList);
+                  //     },
+                  //   ),
+                  // ),
                 ],
               );
             },
