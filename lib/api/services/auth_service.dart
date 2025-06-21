@@ -4,24 +4,14 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 import 'package:shared_preferences/shared_preferences.dart'; // ¡Nueva importación!
-
 import 'package:smged/api/models/login_request.dart';
 import 'package:smged/api/models/login_response.dart';
+import 'package:smged/config.dart';
 
 class AuthService {
-  static final String _baseUrl = _getPlatformBaseUrl();
+  static final String _baseUrl = Config.apiUrl;
 
-  static String _getPlatformBaseUrl() {
-    if (kIsWeb) {
-      return 'http://127.0.0.1:3000';
-    } else {
-      if (Platform.isAndroid) {
-        return 'http://10.0.2.2:3000';
-      } else {
-        return 'http://127.0.0.1:3000';
-      }
-    }
-  }
+
 
   static const String _loginEndpoint = '/usuarios/login';
   // Claves para SharedPreferences

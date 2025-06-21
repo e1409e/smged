@@ -4,16 +4,12 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'dart:io' show Platform;
 import 'dart:typed_data'; // Importar para utf8.decode
-
+import 'package:smged/config.dart';
 import 'package:smged/api/models/cita.dart'; // Asegúrate de que este import sea correcto
 
 class CitasService {
   // Ajusta esta URL según tu entorno (desarrollo/producción)
-  final String _baseUrl = kIsWeb
-      ? 'http://127.0.0.1:3000'
-      : Platform.isAndroid
-          ? 'http://10.0.2.2:3000'
-          : 'http://127.0.0.1:3000';
+  final String _baseUrl = Config.apiUrl; 
 
   // Método para obtener todas las citas
   Future<List<Cita>> obtenerCitas() async {

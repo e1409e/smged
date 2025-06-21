@@ -4,30 +4,27 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http; // Paquete para realizar peticiones HTTP
 import 'package:smged/api/models/discapacidad.dart'; // Importa el modelo de Discapacidad
+import 'package:smged/config.dart';
 
 class DiscapacidadesService {
-  // La URL base de tu API.
-  // Es crucial que esta URL sea accesible desde el entorno donde corres tu app.
-  // - Para emuladores Android: 'http://10.0.2.2:3000/api'
-  // - Para simuladores iOS/Web/Desktop local: 'http://localhost:3000/api'
-  // - Si tu API está en una red local y usas un dispositivo físico: 'http://TU_IP_LOCAL:3000/api'
-  final String _baseUrl = _getPlatformBaseUrl(); // ¡Ajusta esta URL a tu configuración!
-  final Map<String, String> _headers = {'Content-Type': 'application/json'}; // Encabezado común para JSON
+  
+  final String _baseUrl = Config.apiUrl; 
+  final Map<String, String> _headers = {'Content-Type': 'application/json'}; 
 
-  static String _getPlatformBaseUrl() {
-    if (kIsWeb) {
-      // Para desarrollo web, usa localhost o la IP de tu máquina si accedes desde otro dispositivo en la misma red
-      return 'http://127.0.0.1:3000';
-    } else {
-      // Para Android, usa la IP especial para emuladores que apunta al localhost de la máquina host
-      if (Platform.isAndroid) {
-        return 'http://10.0.2.2:3000';
-      } else {
-        // Para iOS, Desktop, y otros, usa localhost
-        return 'http://127.0.0.1:3000';
-      }
-    }
-  }
+  // static String _getPlatformBaseUrl() {
+  //   if (kIsWeb) {
+  //     // Para desarrollo web, usa localhost o la IP de tu máquina si accedes desde otro dispositivo en la misma red
+  //     return 'http://127.0.0.1:3000';
+  //   } else {
+  //     // Para Android, usa la IP especial para emuladores que apunta al localhost de la máquina host
+  //     if (Platform.isAndroid) {
+  //       return 'http://10.0.2.2:3000';
+  //     } else {
+  //       // Para iOS, Desktop, y otros, usa localhost
+  //       return 'http://127.0.0.1:3000';
+  //     }
+  //   }
+  // }
   /// Obtiene todas las discapacidades desde la API.
   /// Retorna una lista de objetos [Discapacidad].
   /// Lanza una [Exception] si la petición falla.

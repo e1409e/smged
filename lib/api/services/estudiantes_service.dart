@@ -3,31 +3,31 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'dart:io' show Platform;
-
 import 'package:smged/api/models/estudiante.dart';
+import 'package:smged/config.dart';
 
 class EstudiantesService {
   // URL base de la API para estudiantes, determinada al inicio de la aplicación
-  static final String _baseUrl = _getPlatformBaseUrl();
+  static final String _baseUrl = '${Config.apiUrl}/estudiantes';
 
   // Encabezados HTTP comunes para solicitudes que envían JSON
   static const Map<String, String> _headers = {'Content-Type': 'application/json'};
 
-  // Método para determinar la URL base según la plataforma (Web, Android, iOS/Desktop)
-  static String _getPlatformBaseUrl() {
-    if (kIsWeb) {
-      // Para desarrollo web, usa localhost o la IP de tu máquina si accedes desde otro dispositivo en la misma red
-      return 'http://127.0.0.1:3000/estudiantes';
-    } else {
-      // Para Android, usa la IP especial para emuladores que apunta al localhost de la máquina host
-      if (Platform.isAndroid) {
-        return 'http://10.0.2.2:3000/estudiantes';
-      } else {
-        // Para iOS, Desktop, y otros, usa localhost
-        return 'http://127.0.0.1:3000/estudiantes';
-      }
-    }
-  }
+  // // Método para determinar la URL base según la plataforma (Web, Android, iOS/Desktop)
+  // static String _getPlatformBaseUrl() {
+  //   if (kIsWeb) {
+  //     // Para desarrollo web, usa localhost o la IP de tu máquina si accedes desde otro dispositivo en la misma red
+  //     return 'http://127.0.0.1:3000/estudiantes';
+  //   } else {
+  //     // Para Android, usa la IP especial para emuladores que apunta al localhost de la máquina host
+  //     if (Platform.isAndroid) {
+  //       return 'http://10.0.2.2:3000/estudiantes';
+  //     } else {
+  //       // Para iOS, Desktop, y otros, usa localhost
+  //       return 'http://127.0.0.1:3000/estudiantes';
+  //     }
+  //   }
+  // }
 
   // --- Métodos de Consumo de API (CRUD) ---
 
