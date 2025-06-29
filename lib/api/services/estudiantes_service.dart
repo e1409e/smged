@@ -13,21 +13,7 @@ class EstudiantesService {
   // Encabezados HTTP comunes para solicitudes que envían JSON
   static const Map<String, String> _headers = {'Content-Type': 'application/json'};
 
-  // // Método para determinar la URL base según la plataforma (Web, Android, iOS/Desktop)
-  // static String _getPlatformBaseUrl() {
-  //   if (kIsWeb) {
-  //     // Para desarrollo web, usa localhost o la IP de tu máquina si accedes desde otro dispositivo en la misma red
-  //     return 'http://127.0.0.1:3000/estudiantes';
-  //   } else {
-  //     // Para Android, usa la IP especial para emuladores que apunta al localhost de la máquina host
-  //     if (Platform.isAndroid) {
-  //       return 'http://10.0.2.2:3000/estudiantes';
-  //     } else {
-  //       // Para iOS, Desktop, y otros, usa localhost
-  //       return 'http://127.0.0.1:3000/estudiantes';
-  //     }
-  //   }
-  // }
+
 
   // --- Métodos de Consumo de API (CRUD) ---
 
@@ -136,13 +122,6 @@ class EstudiantesService {
       debugPrint('[EstudiantesService] Cuerpo de la respuesta de la API al actualizar: ${utf8.decode(response.bodyBytes)}');
 
       if (response.statusCode == 200) {
-        // La API devuelve un JSON simple: {"editar_estudiante": true}
-        // Basado en la modificación anterior, si devuelve true, significa éxito.
-        // Ahora, queremos devolver el objeto Estudiante con los datos actualizados,
-        // incluyendo los campos derivados (facultad, carrera, etc.) para que el UI pueda refrescarse.
-        // Para esto, podemos hacer una nueva llamada GET o construir el objeto completo
-        // asumiendo que los datos en 'estudiante' (el parámetro) son los correctos.
-        // La opción más robusta y que asegura la coherencia con la DB es hacer un GET.
         try {
           final Map<String, dynamic> responseData = json.decode(utf8.decode(response.bodyBytes));
           final bool? editarEstudianteExitoso = responseData['editar_estudiante'] as bool?;

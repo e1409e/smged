@@ -12,6 +12,10 @@ import 'package:smged/layout/screens/historial_medico_screen.dart';
 import 'package:smged/layout/screens/forms/historial_medico_form_screen.dart';
 import 'package:smged/layout/screens/incidencias_screen.dart'; 
 import 'package:smged/layout/screens/forms/incidencias_form_screen.dart'; // Agrega este import
+import 'package:smged/layout/screens/reportePsicologico_screen.dart';
+import 'package:smged/layout/screens/forms/reportePsicologico_form_Screen.dart';
+import 'package:smged/layout/screens/representantes_screen.dart';
+import 'package:smged/layout/screens/forms/representantes_form_screen.dart';
 
 // Clase que importa las rutas
 class AppRoutes {
@@ -32,7 +36,13 @@ class AppRoutes {
     static const String historialMedicoForm = '/historialMedicoForm';
   // rutas incidencias
   static const String incidenciasList = '/incidencias'; 
-  static const String incidenciasForm = '/incidenciasForm'; // <--- Agrega esta línea
+  static const String incidenciasForm = '/incidenciasForm'; 
+  // rutas reportes psicológicos
+  static const String reportesPsicologicosList = '/reportesPsicologicos';
+  static const String reportePsicologicoForm = '/reportePsicologicoForm';
+  // rutas representantes
+  static const String representantesList = '/representantes';
+  static const String representanteForm = '/representanteForm';
 }
 
 // Esta función solo devuelve un mapa de rutas para navegación INTERNA.
@@ -69,5 +79,13 @@ Map<String, WidgetBuilder> getApplicationRoutes() {
     // Rutas de Incidencias
     AppRoutes.incidenciasList: (BuildContext context) => const IncidenciasScreen(), 
     AppRoutes.incidenciasForm: (BuildContext context) => const IncidenciasFormScreen(), // <--- Agrega esta línea
+
+    // Rutas de Reportes Psicológicos
+    AppRoutes.reportesPsicologicosList: (BuildContext context) => const ReportePsicologicoScreen(),
+    AppRoutes.reportePsicologicoForm: (BuildContext context) => const ReportePsicologicoFormScreen(),
+
+    // Rutas de Representantes
+    AppRoutes.representantesList: (BuildContext context) => const RepresentantesScreen(), // idEstudiante debe ser pasado por argumentos
+    AppRoutes.representanteForm: (BuildContext context) => const RepresentantesFormScreen(),
   };
 }

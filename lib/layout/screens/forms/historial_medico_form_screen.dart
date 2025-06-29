@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:http/http.dart' as http;
-import 'dart:io';
-import 'package:smged/config.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/api/models/historial_medico.dart';
+import 'package:smged/api/services/historial_medico_service.dart';
 
 class HistorialMedicoFormScreen extends StatefulWidget {
   const HistorialMedicoFormScreen({super.key});
@@ -16,37 +13,32 @@ class HistorialMedicoFormScreen extends StatefulWidget {
 class _HistorialMedicoFormScreenState extends State<HistorialMedicoFormScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isSaving = false;
-  PlatformFile? _certificadoFile;
-  PlatformFile? _informeFile;
-  PlatformFile? _tratamientoFile;
   int? _idEstudiante;
+  int? _idHistorialMedico;
 
-  // Agrega estos campos:
-  String? _certificadoUrl;
-  String? _informeUrl;
-  String? _tratamientoUrl;
+  final TextEditingController _certificadoController = TextEditingController();
+  final TextEditingController _informeController = TextEditingController();
+  final TextEditingController _tratamientoController = TextEditingController();
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)?.settings.arguments;
+    HistorialMedico? historial;
     if (args is Map) {
       _idEstudiante = args['idEstudiante'] as int?;
-      final historial = args['historial'] as HistorialMedico?;
-      if (historial != null) {
-        _certificadoUrl = historial.certificadoConapdis;
-        _informeUrl = historial.informeMedico;
-        _tratamientoUrl = historial.tratamiento;
-      }
+      historial = args['historial'] as HistorialMedico?;
     } else if (args is int) {
       _idEstudiante = args;
+    } else if (args is HistorialMedico) {
+      historial = args;
+      _idEstudiante = historial.idEstudiante;
     }
-  }
-
-  Future<void> _pickFile(Function(PlatformFile) onPicked) async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles();
-    if (result != null && result.files.single.path != null) {
-      onPicked(result.files.single);
+    if (historial != null) {
+      _idHistorialMedico = historial.idHistorialMedico;
+      _certificadoController.text = historial.certificadoConapdis;
+      _informeController.text = historial.informeMedico;
+      _tratamientoController.text = historial.tratamiento;
     }
   }
 
@@ -54,49 +46,30 @@ class _HistorialMedicoFormScreenState extends State<HistorialMedicoFormScreen> {
     if (_idEstudiante == null) return;
     setState(() => _isSaving = true);
 
+    final historial = HistorialMedico(
+      idHistorialMedico: _idHistorialMedico,
+      idEstudiante: _idEstudiante!,
+      certificadoConapdis: _certificadoController.text.trim(),
+      informeMedico: _informeController.text.trim(),
+      tratamiento: _tratamientoController.text.trim(),
+    );
+
     try {
-      final uri = Uri.parse('${Config.apiUrl}/historial_medico');
-      final request = http.MultipartRequest('POST', uri);
-
-      request.fields['id_estudiante'] = _idEstudiante.toString();
-
-      if (_certificadoFile != null && _certificadoFile!.path != null) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'certificado_conapdis',
-          _certificadoFile!.path!,
-          filename: _certificadoFile!.name,
-        ));
-      }
-      if (_informeFile != null && _informeFile!.path != null) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'informe_medico',
-          _informeFile!.path!,
-          filename: _informeFile!.name,
-        ));
-      }
-      if (_tratamientoFile != null && _tratamientoFile!.path != null) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'tratamiento',
-          _tratamientoFile!.path!,
-          filename: _tratamientoFile!.name,
-        ));
-      }
-
-      final response = await request.send();
-
-      if (response.statusCode == 201) {
+      if (_idHistorialMedico != null) {
+        await HistorialMedicoService().editarHistorialMedico(_idHistorialMedico!, historial);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Historial médico actualizado exitosamente')),
+          );
+          Navigator.of(context).pop(true);
+        }
+      } else {
+        await HistorialMedicoService().crearHistorialMedico(historial);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Historial médico guardado exitosamente')),
           );
-          Navigator.of(context).pop();
-        }
-      } else {
-        final respStr = await response.stream.bytesToString();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al guardar: $respStr')),
-          );
+          Navigator.of(context).pop(true);
         }
       }
     } catch (e) {
@@ -110,105 +83,98 @@ class _HistorialMedicoFormScreenState extends State<HistorialMedicoFormScreen> {
     }
   }
 
-  Widget _buildArchivoField({
-    required String label,
-    required PlatformFile? file,
-    required VoidCallback onPick,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                file?.name ?? 'No seleccionado',
-                style: TextStyle(
-                  color: file != null ? Colors.black87 : Colors.grey,
-                  fontStyle: file != null ? FontStyle.normal : FontStyle.italic,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.upload_file),
-              label: const Text('Seleccionar'),
-              onPressed: onPick,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final bool esEscritorio = MediaQuery.of(context).size.width > 700;
-    final double cardWidth = esEscritorio ? 500 : MediaQuery.of(context).size.width * 0.95;
+    final double formWidth = esEscritorio ? 500 : double.infinity;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nuevo Historial Médico', style: TextStyle(color: Colors.white)),
+        title: Text(_idHistorialMedico != null ? 'Editar Historial Médico' : 'Nuevo Historial Médico', style: const TextStyle(color: Colors.white)),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: cardWidth),
-          child: Card(
-            elevation: 4,
-            margin: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildArchivoField(
-                      label: 'Certificado CONAPDIS',
-                      file: _certificadoFile,
-                      onPick: () => _pickFile((file) => setState(() => _certificadoFile = file)),
-                    ),
-                    _buildArchivoField(
-                      label: 'Informe Médico',
-                      file: _informeFile,
-                      onPick: () => _pickFile((file) => setState(() => _informeFile = file)),
-                    ),
-                    _buildArchivoField(
-                      label: 'Tratamiento',
-                      file: _tratamientoFile,
-                      onPick: () => _pickFile((file) => setState(() => _tratamientoFile = file)),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.save),
-                        label: _isSaving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Text('Guardar'),
-                        onPressed: _isSaving ? null : _guardarHistorial,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: formWidth),
+            child: Card(
+              elevation: 8.0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        _idHistorialMedico != null ? 'Editar Historial Médico' : 'Nuevo Historial Médico',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20.0),
+                      TextFormField(
+                        controller: _certificadoController,
+                        decoration: const InputDecoration(
+                          labelText: 'Certificado CONAPDIS',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.picture_as_pdf),
+                        ),
+                        maxLines: 1,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _informeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Informe Médico',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.description),
+                        ),
+                        maxLines: 1,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _tratamientoController,
+                        decoration: const InputDecoration(
+                          labelText: 'Tratamiento',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.medical_services),
+                        ),
+                        maxLines: 1,
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: _isSaving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.save),
+                          label: Text(_idHistorialMedico != null ? 'Guardar Cambios' : 'Guardar'),
+                          onPressed: _isSaving ? null : _guardarHistorial,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

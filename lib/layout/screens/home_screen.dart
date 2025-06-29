@@ -17,6 +17,9 @@ import 'package:smged/api/services/estudiantes_service.dart';
 import 'package:smged/api/models/estudiante.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:smged/main.dart'; 
+import 'package:url_launcher/url_launcher.dart';
+import 'package:smged/layout/widgets/search_bar_widget.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onLogout;
@@ -210,6 +213,105 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
+  Future<void> _enviarCorreoAEstudiante(Estudiante estudiante) async {
+    List<Cita> citas = [];
+    try {
+      citas = await _citasService.obtenerCitas();
+    } catch (_) {}
+
+    final ahora = DateTime.now();
+    final citasPendientes = citas
+        .where((c) =>
+            c.id_estudiante == estudiante.idEstudiante &&
+            c.pendiente == 1 &&
+            c.fecha_cita.isAfter(ahora.subtract(const Duration(days: 1))))
+        .toList();
+
+    citasPendientes.sort((a, b) => a.fecha_cita.compareTo(b.fecha_cita));
+    final proximaCita = citasPendientes.isNotEmpty ? citasPendientes.first : null;
+
+    String asunto = 'Tienes una Cita';
+    if (proximaCita != null) {
+      final fecha = DateFormat('dd/MM/yyyy').format(proximaCita.fecha_cita);
+      asunto = 'Tienes una Cita para $fecha';
+    }
+
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: estudiante.correo ?? '',
+      query: 'subject=${Uri.encodeComponent(asunto)}',
+    );
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir el cliente de correo')),
+      );
+    }
+  }
+
+  void _mostrarDialogoSeleccionEstudiante() async {
+    List<Estudiante> estudiantes = [];
+    try {
+      estudiantes = await _estudiantesService.obtenerTodosLosEstudiantes();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cargar estudiantes: $e')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+
+    final TextEditingController searchController = TextEditingController();
+    List<Estudiante> filteredEstudiantes = List.from(estudiantes);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return SimpleDialog(
+              title: const Text('Selecciona un estudiante'),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: SearchBarWidget(
+                    controller: searchController,
+                    hintText: 'Buscar estudiante...',
+                    onChanged: (value) {
+                      setState(() {
+                        filteredEstudiantes = estudiantes.where((est) {
+                          final nombre = '${est.nombres} ${est.apellidos}'.toLowerCase();
+                          final correo = (est.correo ?? '').toLowerCase();
+                          return nombre.contains(value.toLowerCase()) || correo.contains(value.toLowerCase());
+                        }).toList();
+                      });
+                    },
+                  ),
+                ),
+                ...filteredEstudiantes.map((estudiante) {
+                  return SimpleDialogOption(
+                    child: Text('${estudiante.nombres} ${estudiante.apellidos}'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _enviarCorreoAEstudiante(estudiante);
+                    },
+                  );
+                }),
+                if (filteredEstudiantes.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text('No se encontraron estudiantes.'),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool esEscritorio = MediaQuery.of(context).size.width > 700;
@@ -223,7 +325,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             Stack(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.notifications_active),
+                  icon: const Icon(Icons.calendar_today), // Cambiado a icono de calendario
                   onPressed: _showCitasPendientesAlert,
                   tooltip: 'Ver citas pendientes',
                 ),
@@ -254,7 +356,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             )
           else
             IconButton(
-              icon: const Icon(Icons.notifications_none),
+              icon: const Icon(Icons.calendar_today), // Cambiado a icono de calendario
               onPressed: _showCitasPendientesAlert,
               tooltip: 'No hay citas pendientes',
             ),
@@ -294,12 +396,15 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                     padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
                     child: Column(
                       children: [
+                        // Card de Cantidad de Estudiantes con navegación
                         InfoCard(
                           title: 'Cantidad de Estudiantes',
                           value: '$_totalEstudiantes',
                           icon: Icons.people_alt,
                           color: AppColors.primary,
-                          onTap: null,
+                          onTap: () {
+                            Navigator.pushNamed(context, app_routes.AppRoutes.estudiantesList);
+                          },
                         ),
                         // Card de CONAPDIS con indicador y porcentaje al lado
                         InfoCard(
@@ -327,7 +432,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                             padding: const EdgeInsets.only(bottom: 18.0),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              
                             ),
                           ),
                         InfoCard(
@@ -339,12 +443,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                             Navigator.pushNamed(context, app_routes.AppRoutes.incidenciasList);
                           },
                         ),
-                        const InfoCard(
+                        InfoCard(
                           title: 'Informar a Estudiante de Cita',
                           value: 'Acción Rápida',
                           icon: Icons.calendar_today,
                           color: AppColors.success,
-                          onTap: null,
+                          onTap: _mostrarDialogoSeleccionEstudiante,
                         ),
                         const SizedBox(height: 20),
                       ],

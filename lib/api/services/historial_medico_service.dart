@@ -2,7 +2,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:smged/api/models/historial_medico.dart';
-import 'package:smged/config.dart'; // ¡Importa tu archivo de configuración aquí!
+import 'package:smged/config.dart';
 
 class HistorialMedicoService {
   final String _baseUrl = '${Config.apiUrl}/historial_medico';
@@ -47,7 +47,7 @@ class HistorialMedicoService {
     }
   }
 
-  /// Crea un nuevo historial médico.
+  /// Crea un nuevo historial médico (sin archivos).
   Future<HistorialMedico> crearHistorialMedico(HistorialMedico historial) async {
     final response = await http.post(
       Uri.parse(_baseUrl),
@@ -67,12 +67,12 @@ class HistorialMedicoService {
     }
   }
 
-  /// Edita un historial médico existente.
+  /// Edita un historial médico existente (sin archivos).
   Future<HistorialMedico> editarHistorialMedico(int id, HistorialMedico historial) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/$id'),
       headers: {'Content-Type': 'application/json'},
-      body: json.encode(historial.toJson()),
+      body: json.encode(historial.toCreateJson()),
     );
 
     if (response.statusCode == 200) {

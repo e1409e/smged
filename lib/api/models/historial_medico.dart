@@ -1,5 +1,5 @@
 class HistorialMedico {
-  final int idHistorialMedico;
+  final int? idHistorialMedico;
   final int idEstudiante;
   /// Ruta al archivo de certificado CONAPDIS (pdf, doc, imagen, etc)
   final String certificadoConapdis;
@@ -12,7 +12,7 @@ class HistorialMedico {
   final String? cedulaEstudiante;
 
   HistorialMedico({
-    required this.idHistorialMedico,
+    this.idHistorialMedico,
     required this.idEstudiante,
     required this.certificadoConapdis,
     required this.informeMedico,
@@ -37,7 +37,7 @@ class HistorialMedico {
 
   Map<String, dynamic> toJson() {
     return {
-      'id_historialmedico': idHistorialMedico,
+      if (idHistorialMedico != null) 'id_historialmedico': idHistorialMedico,
       'id_estudiante': idEstudiante,
       'certificado_conapdis': certificadoConapdis,
       'informe_medico': informeMedico,

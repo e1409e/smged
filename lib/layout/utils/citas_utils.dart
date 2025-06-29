@@ -23,101 +23,107 @@ class CitasUtils {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
-        // Usamos dialogContext para claridad
+        final bool esWindows = Theme.of(context).platform == TargetPlatform.windows;
         return AlertDialog(
-          title: Align(
-            child: const Text(
+          title: const Center(
+            child: Text(
               'Información de la Cita',
               style: TextStyle(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
           ),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                // Campo Código (Etiqueta en negrita)
-                Text.rich(
-                  // Usamos Text.rich para combinar texto normal y negrita
-                  TextSpan(
-                    children: [
-                      const TextSpan(
-                        text: 'Código: ',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(text: cita.id_citas?.toString() ?? 'N/A'),
-                    ],
-                  ),
-                ),
-
-                // Campo Estudiante (Etiqueta en negrita)
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      const TextSpan(
-                        text: 'Estudiante: ',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(text: cita.nombre_estudiante ?? 'N/A'),
-                    ],
-                  ),
-                ),
-
-                // Campo Fecha (Etiqueta en negrita)
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      const TextSpan(
-                        text: 'Fecha: ',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(text: fechaCitaFormateada),
-                    ],
-                  ),
-                ),
-
-                // Campo Motivo (Salto de línea, con etiqueta en negrita)
-                const SizedBox(height: 8.0), // Espacio antes del título
-                const Text(
-                  'Motivo:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  cita.motivo_cita ?? 'N/A',
-                  softWrap:
-                      true, // Permite que el texto se ajuste a varias líneas
-                  overflow: TextOverflow.visible,
-                ),
-                // Eliminamos el Text('') que estaba vacío
-
-                // Campo Estado (Etiqueta en negrita para "Estado:", y Chip)
-                Padding(
-                  padding: const EdgeInsets.only(
-                    top: 8.0,
-                  ), // Pequeño padding para separar
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Estado: ',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ), // Etiqueta en negrita
-                      ),
-                      Chip(
-                        label: Text(
-                          estadoCita,
-                          style: TextStyle(
-                            color: estadoColor,
-                            fontWeight: FontWeight.bold,
-                          ),
+          insetPadding: esWindows
+              ? const EdgeInsets.symmetric(horizontal: 40.0, vertical: 24.0) // Padding original en Windows
+              : const EdgeInsets.symmetric(horizontal: 8.0, vertical: 24.0), // Más ancho en otras plataformas
+          content: SizedBox(
+            width: esWindows ? 500 : MediaQuery.of(context).size.width * 0.95, // Ancho original en Windows, ancho grande en otros
+            child: SingleChildScrollView(
+              child: ListBody(
+                children: <Widget>[
+                  // Campo Código (Etiqueta en negrita)
+                  Text.rich(
+                    // Usamos Text.rich para combinar texto normal y negrita
+                    TextSpan(
+                      children: [
+                        const TextSpan(
+                          text: 'Código: ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        backgroundColor: Colors.grey[200],
-                        padding: const EdgeInsets.all(1),
-                      ),
-                    ],
+                        TextSpan(text: cita.id_citas?.toString() ?? 'N/A'),
+                      ],
+                    ),
                   ),
-                ),
-                const Divider(), // Separador para legibilidad
-              ],
+
+                  // Campo Estudiante (Etiqueta en negrita)
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(
+                          text: 'Estudiante: ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(text: cita.nombre_estudiante ?? 'N/A'),
+                      ],
+                    ),
+                  ),
+
+                  // Campo Fecha (Etiqueta en negrita)
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(
+                          text: 'Fecha: ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(text: fechaCitaFormateada),
+                      ],
+                    ),
+                  ),
+
+                  // Campo Motivo (Salto de línea, con etiqueta en negrita)
+                  const SizedBox(height: 8.0), // Espacio antes del título
+                  const Text(
+                    'Motivo:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    cita.motivo_cita ?? 'N/A',
+                    softWrap:
+                        true, // Permite que el texto se ajuste a varias líneas
+                    overflow: TextOverflow.visible,
+                  ),
+                  // Eliminamos el Text('') que estaba vacío
+
+                  // Campo Estado (Etiqueta en negrita para "Estado:", y Chip)
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      top: 8.0,
+                    ), // Pequeño padding para separar
+                    child: Row(
+                      children: [
+                        const Text(
+                          'Estado: ',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ), // Etiqueta en negrita
+                        ),
+                        Chip(
+                          label: Text(
+                            estadoCita,
+                            style: TextStyle(
+                              color: estadoColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          backgroundColor: Colors.grey[200],
+                          padding: const EdgeInsets.all(1),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(), // Separador para legibilidad
+                ],
+              ),
             ),
           ),
           actions: <Widget>[

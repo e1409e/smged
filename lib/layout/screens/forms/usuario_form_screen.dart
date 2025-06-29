@@ -112,7 +112,7 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
                   children: [
                     // Título dentro de la card
                     Text(
-                      isEditing ? 'Editando usuario' : 'Agregando Usuario',
+                      isEditing ? 'Editando usuario' : 'Agregar Usuario',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,

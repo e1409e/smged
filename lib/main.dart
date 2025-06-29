@@ -1,9 +1,7 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
-//import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:shared_preferences/shared_preferences.dart';
-//import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:smged/layout/screens/login_screen.dart';
 import 'package:smged/layout/screens/home_screen.dart';
