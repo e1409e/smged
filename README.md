@@ -1,39 +1,42 @@
-# SISTEMA MULTIPLATAFORMAS PARA LA GESTION DE ESTUDIANTES CON DISCAPACIDAD (SMGED)
+# 🎓 SISTEMA MULTIPLATAFORMAS PARA LA GESTIÓN DE ESTUDIANTES CON DISCAPACIDAD (SMGED)
 
-**smged** es una aplicación Flutter para la gestión integral de estudiantes, citas, incidencias, reportes psicológicos, representantes, carreras, facultades y usuarios en una institución educativa. El sistema está diseñado para facilitar la administración y el seguimiento de información académica, médica y administrativa de los estudiantes.
-
-## Tabla de Contenidos
-
-- [Características](#características)
-- [Estructura del Proyecto](#estructura-del-proyecto)
-- [Modelos de Datos](#modelos-de-datos)
-- [Servicios API](#servicios-api)
-- [Pantallas Principales](#pantallas-principales)
-- [Utilidades y Widgets Personalizados](#utilidades-y-widgets-personalizados)
-- [Reportes PDF](#reportes-pdf)
-- [Configuración](#configuración)
-- [Rutas de Navegación](#rutas-de-navegación)
-- [Cómo Ejecutar](#cómo-ejecutar)
-- [Notas de Desarrollo](#notas-de-desarrollo)
+**smged** es una aplicación **Flutter** para la gestión integral de estudiantes, citas, incidencias, reportes psicológicos, representantes, carreras, facultades y usuarios en una institución educativa. El sistema está diseñado para facilitar la administración y el seguimiento de información académica, médica y administrativa de los estudiantes.
 
 ---
 
-## Características
+## 📑 Tabla de Contenidos
 
-- Gestión de estudiantes, incluyendo datos personales, discapacidades y observaciones.
-- Registro y seguimiento de citas médicas o administrativas.
-- Administración de incidencias y reportes psicológicos.
-- Gestión de representantes legales de los estudiantes.
-- Administración de carreras, facultades y usuarios del sistema.
-- Generación de reportes en PDF (listas, fichas, reportes psicológicos).
-- Interfaz moderna y responsiva, con componentes personalizados.
-- Integración con servicios RESTful para persistencia de datos.
+- [✨ Características](#-características)
+- [📁 Estructura del Proyecto](#-estructura-del-proyecto)
+- [🗂️ Modelos de Datos](#️-modelos-de-datos)
+- [🔗 Servicios API](#-servicios-api)
+- [🖥️ Pantallas Principales](#️-pantallas-principales)
+- [🧩 Utilidades y Widgets Personalizados](#-utilidades-y-widgets-personalizados)
+- [📝 Reportes PDF](#-reportes-pdf)
+- [⚙️ Configuración](#-configuración)
+- [🗺️ Rutas de Navegación](#️-rutas-de-navegación)
+- [🚀 Cómo Ejecutar](#-cómo-ejecutar)
+- [🛠️ Notas de Desarrollo](#️-notas-de-desarrollo)
+- [👥 Créditos](#-créditos)
 
 ---
 
-## Estructura del Proyecto
+## ✨ Características
 
-```
+- 👩‍🎓 Gestión de estudiantes, incluyendo datos personales, discapacidades y observaciones.
+- 📅 Registro y seguimiento de citas médicas o administrativas.
+- ⚠️ Administración de incidencias y reportes psicológicos.
+- 👨‍👩‍👧‍👦 Gestión de representantes legales de los estudiantes.
+- 🏛️ Administración de carreras, facultades y usuarios del sistema.
+- 📝 Generación de reportes en PDF (listas, fichas, reportes psicológicos).
+- 💻 Interfaz moderna y responsiva, con componentes personalizados.
+- 🔗 Integración con servicios RESTful para persistencia de datos.
+
+---
+
+## 📁 Estructura del Proyecto
+
+```text
 lib/
 ├── api/
 │   ├── exceptions/           # Excepciones personalizadas para manejo de errores API
@@ -51,7 +54,7 @@ lib/
 
 ---
 
-## Modelos de Datos
+## 🗂️ Modelos de Datos
 
 Ubicados en [`lib/api/models/`](lib/api/models):
 
@@ -65,7 +68,7 @@ Ubicados en [`lib/api/models/`](lib/api/models):
 
 ---
 
-## Servicios API
+## 🔗 Servicios API
 
 Ubicados en [`lib/api/services/`](lib/api/services):
 
@@ -80,7 +83,7 @@ Ubicados en [`lib/api/services/`](lib/api/services):
 
 ---
 
-## Pantallas Principales
+## 🖥️ Pantallas Principales
 
 Ubicadas en [`lib/layout/screens/`](lib/layout/screens):
 
@@ -94,7 +97,7 @@ Ubicadas en [`lib/layout/screens/`](lib/layout/screens):
 
 ---
 
-## Utilidades y Widgets Personalizados
+## 🧩 Utilidades y Widgets Personalizados
 
 - **custom_colors.dart**: Paleta de colores personalizada.
 - **custom_data_table.dart**: Tablas de datos adaptadas.
@@ -105,7 +108,7 @@ Ubicadas en [`lib/layout/screens/`](lib/layout/screens):
 
 ---
 
-## Reportes PDF
+## 📝 Reportes PDF
 
 Ubicados en [`lib/layout/reports/`](lib/layout/reports):
 
@@ -113,23 +116,23 @@ Ubicados en [`lib/layout/reports/`](lib/layout/reports):
 - **estudiante_lista_report.dart**: Listado masivo de estudiantes.
 - **reporte_psicologico_report.dart**: Reporte PDF de informes psicológicos.
 
-Utilizan los paquetes `pdf` y `printing` para la generación y previsualización/impresión de documentos.
+> Utilizan los paquetes [`pdf`](https://pub.dev/packages/pdf) y [`printing`](https://pub.dev/packages/printing) para la generación y previsualización/impresión de documentos.
 
 ---
 
-## Configuración
+## ⚙️ Configuración
 
 El archivo [`lib/config.dart`](lib/config.dart) gestiona la URL base de la API, diferenciando entre entornos de desarrollo y producción, y soporta web, Android, iOS y escritorio.
 
 ---
 
-## Rutas de Navegación
+## 🗺️ Rutas de Navegación
 
 Definidas en [`lib/routes.dart`](lib/routes.dart) mediante la clase `AppRoutes`, que centraliza las rutas para cada pantalla y formulario.
 
 ---
 
-## Cómo Ejecutar
+## 🚀 Cómo Ejecutar
 
 1. **Instala las dependencias:**
    ```sh
@@ -151,9 +154,9 @@ Definidas en [`lib/routes.dart`](lib/routes.dart) mediante la clase `AppRoutes`,
 
 ---
 
-## Notas de Desarrollo
+## 🛠️ Notas de Desarrollo
 
-- El proyecto utiliza [json_serializable](https://pub.dev/packages/json_serializable) para la generación de modelos a partir de JSON.
+- El proyecto utiliza [`json_serializable`](https://pub.dev/packages/json_serializable) para la generación de modelos a partir de JSON.
 - Los servicios API manejan errores y excepciones personalizadas.
 - El diseño es responsivo y multiplataforma (web, móvil, escritorio).
 - Los reportes PDF requieren permisos de almacenamiento en móvil/escritorio.
@@ -162,10 +165,11 @@ Definidas en [`lib/routes.dart`](lib/routes.dart) mediante la clase `AppRoutes`,
 
 ---
 
-## Créditos
+## 👥 Créditos
 
-Desarrollado por el equipo de smged.
+Desarrollado por el equipo de **smged**.
 
 ---
 
-¿Tienes dudas o sugerencias? ¡Contribuye o abre un issue!
+¿Tienes dudas o sugerencias?  
+¡Contribuye o abre un issue!
