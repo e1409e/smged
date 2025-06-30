@@ -15,6 +15,8 @@ import 'package:flutter/services.dart';
 // NUEVAS IMPORTACIONES PARA CARRERAS
 import 'package:smged/api/models/carrera.dart';
 import 'package:smged/api/services/carreras_service.dart';
+// Importación clave: las nuevas excepciones personalizadas
+import 'package:smged/api/exceptions/api_exception.dart'; 
 
 class EstudianteFormScreen extends StatefulWidget {
   final Estudiante? estudianteToEdit;
@@ -139,11 +141,21 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
         _discapacidades = fetchedDiscapacidades;
         _setInitialDiscapacidadSelection();
       });
+    } on NetworkException catch (e) {
+      setState(() {
+        _discapacidadesError = 'Error de red: ${e.message}';
+      });
+      _showErrorSnackBar('No se pudieron cargar las discapacidades debido a un problema de conexión.');
+    } on ApiException catch (e) {
+      setState(() {
+        _discapacidadesError = 'Error al cargar discapacidades: ${e.message}';
+      });
+       _showErrorSnackBar('Ocurrió un error al cargar las discapacidades: ${e.message}');
     } catch (e) {
       setState(() {
-        _discapacidadesError =
-            'Error al cargar discapacidades: ${e.toString().replaceFirst('Exception: ', '')}';
+        _discapacidadesError = 'Error inesperado al cargar discapacidades.';
       });
+      _showErrorSnackBar('Ocurrió un error inesperado al cargar las discapacidades.');
     } finally {
       setState(() {
         _isLoadingDiscapacidades = false;
@@ -162,11 +174,21 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
         _carreras = fetchedCarreras;
         _setInitialCarreraSelection();
       });
+    } on NetworkException catch (e) {
+      setState(() {
+        _carrerasError = 'Error de red: ${e.message}';
+      });
+      _showErrorSnackBar('No se pudieron cargar las carreras debido a un problema de conexión.');
+    } on ApiException catch (e) {
+      setState(() {
+        _carrerasError = 'Error al cargar carreras: ${e.message}';
+      });
+      _showErrorSnackBar('Ocurrió un error al cargar las carreras: ${e.message}');
     } catch (e) {
       setState(() {
-        _carrerasError =
-            'Error al cargar carreras: ${e.toString().replaceFirst('Exception: ', '')}';
+        _carrerasError = 'Error inesperado al cargar carreras.';
       });
+      _showErrorSnackBar('Ocurrió un error inesperado al cargar las carreras.');
     } finally {
       setState(() {
         _isLoadingCarreras = false;
@@ -179,6 +201,8 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
       return;
     }
 
+    // Oculta el SnackBar anterior si existe y muestra el de "Guardando..."
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Guardando estudiante...'),
@@ -202,23 +226,13 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
 
       if (idDiscapacidad == null) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor, selecciona una discapacidad.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        _showErrorSnackBar('Por favor, selecciona una discapacidad.');
         return;
       }
 
       if (idCarrera == null) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor, selecciona una carrera.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        _showErrorSnackBar('Por favor, selecciona una carrera.');
         return;
       }
 
@@ -265,18 +279,50 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
       );
 
       Navigator.of(context).pop(true);
+    } on NetworkException catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      _showErrorSnackBar(
+        'Problema de conexión: ${e.message}',
+      );
+      debugPrint('Error de red al guardar/actualizar estudiante: $e');
+    } on ValidationException catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      _showErrorSnackBar(
+        'Error de validación: ${e.toString()}', // e.toString() ya formatea los errores de validación
+      );
+      debugPrint('Error de validación al guardar/actualizar estudiante: $e');
+      // Aquí podrías incluso iterar sobre e.errors si quisieras mostrar errores debajo de cada TextFormField
+      // Por ejemplo: _showValidationErrors(e.errors);
+    } on NotFoundException catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      _showErrorSnackBar(
+        'Estudiante no encontrado: ${e.message}',
+      );
+      debugPrint('Error: estudiante no encontrado al actualizar: $e');
+    } on ApiException catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      _showErrorSnackBar(
+        'Error de la API: ${e.message}',
+      );
+      debugPrint('Error general de la API al guardar/actualizar estudiante: $e');
     } catch (e) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Error al ${widget.estudianteToEdit != null ? 'actualizar' : 'guardar'} estudiante: ${e.toString().replaceFirst('Exception: ', '')}',
-          ),
-          backgroundColor: Colors.red,
-        ),
+      _showErrorSnackBar(
+        'Ocurrió un error inesperado. Por favor, inténtalo de nuevo.',
       );
-      debugPrint('Error al guardar/actualizar estudiante: $e');
+      debugPrint('Error inesperado al guardar/actualizar estudiante: $e');
     }
+  }
+
+  // Método auxiliar para mostrar SnackBar de error de forma consistente
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4), // Mostrar el error por más tiempo
+      ),
+    );
   }
 
   @override
@@ -483,9 +529,9 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                       Text(
                         'Información de Contacto',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16.0),
@@ -566,9 +612,9 @@ class _EstudianteFormScreenState extends State<EstudianteFormScreen> {
                       Text(
                         'Datos Académicos y Médicos',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16.0),
