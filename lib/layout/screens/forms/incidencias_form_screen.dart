@@ -353,11 +353,20 @@ class _IncidenciasFormScreenState extends State<IncidenciasFormScreen> {
                               labelText: 'Fecha del Incidente',
                               initialDate: _fechaIncidente ?? DateTime.now(),
                               firstDate: DateTime(2000),
-                              lastDate: DateTime(2100),
+                              lastDate: DateTime.now(), // <--- Cambia aquí para limitar la fecha máxima a hoy
                               onChanged: (date) {
                                 setState(() {
                                   _fechaIncidente = date;
                                 });
+                              },
+                              validator: (date) {
+                                if (_fechaIncidente == null) {
+                                  return 'Por favor, selecciona la fecha del incidente.';
+                                }
+                                if (_fechaIncidente!.isAfter(DateTime.now())) {
+                                  return 'La fecha no puede ser mayor a la fecha actual.';
+                                }
+                                return null;
                               },
                             ),
                           ),

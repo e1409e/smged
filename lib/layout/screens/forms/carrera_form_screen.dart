@@ -6,6 +6,7 @@ import 'package:smged/api/services/facultades_service.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/layout/widgets/custom_dropdown_button.dart';
 import 'package:collection/collection.dart';
+import 'package:smged/api/exceptions/api_exception.dart';
 
 class CarreraFormDialog extends StatefulWidget {
   final Carrera? carreraToEdit;
@@ -23,6 +24,9 @@ class _CarreraFormDialogState extends State<CarreraFormDialog> {
   List<Facultad> _facultades = [];
   bool _isLoadingFacultades = true;
   bool _isSaving = false;
+
+  // Errores de validación por campo
+  Map<String, List<String>>? _validationErrors;
 
   @override
   void initState() {
@@ -52,8 +56,14 @@ class _CarreraFormDialogState extends State<CarreraFormDialog> {
   }
 
   void _save() async {
+    // Limpia los errores antes de validar
+    setState(() {
+      _validationErrors = null;
+    });
     if (!_formKey.currentState!.validate() || _selectedFacultad == null) return;
-    setState(() => _isSaving = true);
+    setState(() {
+      _isSaving = true;
+    });
 
     final service = CarrerasService();
     try {
@@ -70,13 +80,39 @@ class _CarreraFormDialogState extends State<CarreraFormDialog> {
         );
       }
       if (mounted) Navigator.pop(context, true);
+    } on ValidationException catch (e) {
+      setState(() {
+        _validationErrors = e.errors;
+      });
+      if (e.errors['general'] != null) {
+        _showErrorSnackBar(e.errors['general']!.join(', '));
+      }
+      _formKey.currentState!.validate();
+    } on ApiException catch (e) {
+      _showErrorSnackBar('Error: ${e.message}');
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      _showErrorSnackBar('Error inesperado al guardar carrera.');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  String? _fieldError(String field) {
+    if (_validationErrors != null && _validationErrors![field] != null) {
+      return _validationErrors![field]!.join('\n');
+    }
+    return null;
   }
 
   @override
@@ -110,8 +146,11 @@ class _CarreraFormDialogState extends State<CarreraFormDialog> {
                           horizontal: 12,
                         ),
                       ),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'Campo requerido' : null,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Campo requerido';
+                        final err = _fieldError('carrera');
+                        return err;
+                      },
                     ),
                     const SizedBox(height: 10),
                     CustomDropdownButton<Facultad>(
@@ -123,8 +162,11 @@ class _CarreraFormDialogState extends State<CarreraFormDialog> {
                       items: _facultades,
                       value: _selectedFacultad,
                       onChanged: (f) => setState(() => _selectedFacultad = f),
-                      validator: (v) =>
-                          v == null ? 'Selecciona una facultad' : null,
+                      validator: (v) {
+                        if (v == null) return 'Selecciona una facultad';
+                        final err = _fieldError('id_facultad');
+                        return err;
+                      },
                       itemDisplayText: (f) => '${f.facultad} (${f.siglas})',
                       itemSearchFilter: (f, query) =>
                           f.facultad.toLowerCase().contains(

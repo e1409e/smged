@@ -106,14 +106,17 @@ class _HistorialMedicoScreenState extends State<HistorialMedicoScreen> {
     });
     try {
       final data = await _reportePsicologicoService.obtenerReportesPorEstudiante(idEstudiante);
+      if (!mounted) return; // <-- AGREGA ESTA LÍNEA
       setState(() {
         _reportesPsicologicos = data;
       });
     } catch (e) {
+      if (!mounted) return; // <-- AGREGA ESTA LÍNEA
       setState(() {
         _reportesPsicologicosError = e.toString();
       });
     } finally {
+      if (!mounted) return; // <-- AGREGA ESTA LÍNEA
       setState(() {
         _isLoadingReportesPsicologicos = false;
       });

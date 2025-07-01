@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/api/models/historial_medico.dart';
 import 'package:smged/api/services/historial_medico_service.dart';
+import 'package:smged/api/exceptions/api_exception.dart';
 
 class HistorialMedicoFormScreen extends StatefulWidget {
   const HistorialMedicoFormScreen({super.key});
@@ -15,6 +16,7 @@ class _HistorialMedicoFormScreenState extends State<HistorialMedicoFormScreen> {
   bool _isSaving = false;
   int? _idEstudiante;
   int? _idHistorialMedico;
+  Map<String, List<String>>? _validationErrors;
 
   final TextEditingController _certificadoController = TextEditingController();
   final TextEditingController _informeController = TextEditingController();
@@ -43,8 +45,19 @@ class _HistorialMedicoFormScreenState extends State<HistorialMedicoFormScreen> {
   }
 
   Future<void> _guardarHistorial() async {
-    if (_idEstudiante == null) return;
-    setState(() => _isSaving = true);
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_idEstudiante == null) {
+      _showErrorSnackBar('No se ha especificado el estudiante.');
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _validationErrors = null;
+    });
 
     final historial = HistorialMedico(
       idHistorialMedico: _idHistorialMedico,
@@ -58,29 +71,75 @@ class _HistorialMedicoFormScreenState extends State<HistorialMedicoFormScreen> {
       if (_idHistorialMedico != null) {
         await HistorialMedicoService().editarHistorialMedico(_idHistorialMedico!, historial);
         if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Historial médico actualizado exitosamente')),
+            const SnackBar(
+              content: Text('Historial médico actualizado exitosamente.'),
+              backgroundColor: Colors.green,
+            ),
           );
           Navigator.of(context).pop(true);
         }
       } else {
         await HistorialMedicoService().crearHistorialMedico(historial);
         if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Historial médico guardado exitosamente')),
+            const SnackBar(
+              content: Text('Historial médico guardado exitosamente.'),
+              backgroundColor: Colors.green,
+            ),
           );
           Navigator.of(context).pop(true);
         }
       }
+    } on NetworkException catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      _showErrorSnackBar('Problema de conexión: ${e.message}');
+    } on ValidationException catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      setState(() {
+        _validationErrors = e.errors;
+      });
+      _showErrorSnackBar('Error de validación: ${e.toString()}');
+      _formKey.currentState!.validate();
+    } on NotFoundException catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      _showErrorSnackBar('No encontrado: ${e.message}');
+    } on ApiException catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      _showErrorSnackBar('Error de la API: ${e.message}');
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      _showErrorSnackBar('Ocurrió un error inesperado al guardar el historial médico.');
     } finally {
-      setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  String? _fieldError(String field) {
+    if (_validationErrors != null && _validationErrors![field] != null) {
+      return _validationErrors![field]!.join('\n');
+    }
+    return null;
+  }
+
+  @override
+  void dispose() {
+    _certificadoController.dispose();
+    _informeController.dispose();
+    _tratamientoController.dispose();
+    super.dispose();
   }
 
   @override
@@ -129,6 +188,20 @@ class _HistorialMedicoFormScreenState extends State<HistorialMedicoFormScreen> {
                           prefixIcon: Icon(Icons.picture_as_pdf),
                         ),
                         maxLines: 1,
+                        onChanged: (_) {
+                          if (_validationErrors != null && _validationErrors!.containsKey('certificado_conapdis')) {
+                            setState(() {
+                              _validationErrors!.remove('certificado_conapdis');
+                            });
+                          }
+                        },
+                        validator: (v) {
+                          if (v == null || v.isEmpty) {
+                            return 'Por favor, introduce el certificado CONAPDIS.';
+                          }
+                          final err = _fieldError('certificado_conapdis');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -138,7 +211,21 @@ class _HistorialMedicoFormScreenState extends State<HistorialMedicoFormScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.description),
                         ),
-                        maxLines: 1,
+                        maxLines: 4,
+                        onChanged: (_) {
+                          if (_validationErrors != null && _validationErrors!.containsKey('informe_medico')) {
+                            setState(() {
+                              _validationErrors!.remove('informe_medico');
+                            });
+                          }
+                        },
+                        validator: (v) {
+                          if (v == null || v.isEmpty) {
+                            return 'Por favor, introduce el informe médico.';
+                          }
+                          final err = _fieldError('informe_medico');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -148,7 +235,21 @@ class _HistorialMedicoFormScreenState extends State<HistorialMedicoFormScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.medical_services),
                         ),
-                        maxLines: 1,
+                        maxLines: 4,
+                        onChanged: (_) {
+                          if (_validationErrors != null && _validationErrors!.containsKey('tratamiento')) {
+                            setState(() {
+                              _validationErrors!.remove('tratamiento');
+                            });
+                          }
+                        },
+                        validator: (v) {
+                          if (v == null || v.isEmpty) {
+                            return 'Por favor, introduce el tratamiento.';
+                          }
+                          final err = _fieldError('tratamiento');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 24),
                       SizedBox(

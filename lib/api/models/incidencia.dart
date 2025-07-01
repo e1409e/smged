@@ -1,12 +1,12 @@
 class Incidencia {
   final int? idIncidencia;
-  final int idEstudiante;
+  final int? idEstudiante;
   final String horaIncidente;
   final String fechaIncidente; // formato 'YYYY-MM-DD' o DateTime.parse(fechaIncidente)
   final String lugarIncidente;
   final String descripcionIncidente;
-  final String acuerdos;
-  final String observaciones;
+  final String? acuerdos;
+  final String? observaciones;
 
   // Datos del estudiante (opcionales)
   final String? nombreEstudiante;
@@ -15,13 +15,13 @@ class Incidencia {
 
   Incidencia({
     this.idIncidencia,
-    required this.idEstudiante,
+    this.idEstudiante,
     required this.horaIncidente,
     required this.fechaIncidente,
     required this.lugarIncidente,
     required this.descripcionIncidente,
-    required this.acuerdos,
-    required this.observaciones,
+    this.acuerdos,
+    this.observaciones,
     this.nombreEstudiante,
     this.apellidoEstudiante,
     this.cedulaEstudiante,
@@ -35,8 +35,8 @@ class Incidencia {
       fechaIncidente: json['fecha_incidente'],
       lugarIncidente: json['lugar_incidente'],
       descripcionIncidente: json['descripcion_incidente'],
-      acuerdos: json['acuerdos'],
-      observaciones: json['observaciones'],
+      acuerdos: json['acuerdos']as String?,
+      observaciones: json['observaciones'] as String?,
       nombreEstudiante: json['nombre_estudiante'],
       apellidoEstudiante: json['apellido_estudiante'],
       cedulaEstudiante: json['cedula_estudiante'],

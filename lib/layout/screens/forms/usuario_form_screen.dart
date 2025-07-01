@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:smged/api/models/usuario.dart';
 import 'package:smged/api/services/usuarios_service.dart';
+import 'package:smged/api/exceptions/api_exception.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 
 class UsuarioFormScreen extends StatefulWidget {
@@ -22,6 +24,10 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
   bool _isSaving = false;
 
   final List<String> _roles = ['administrador', 'psicologo', 'docente'];
+  Map<String, List<String>>? _validationErrors;
+
+  // Prefijo de cédula (V- o E-)
+  String _cedulaPrefix = 'V-';
 
   @override
   void initState() {
@@ -29,7 +35,16 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
     if (widget.usuarioToEdit != null) {
       _nombreController.text = widget.usuarioToEdit!.nombre;
       _apellidoController.text = widget.usuarioToEdit!.apellido;
-      _cedulaController.text = widget.usuarioToEdit!.cedulaUsuario;
+      // Configuración del prefijo y número de cédula igual que en estudiantes
+      if (widget.usuarioToEdit!.cedulaUsuario.startsWith('V-')) {
+        _cedulaPrefix = 'V-';
+        _cedulaController.text = widget.usuarioToEdit!.cedulaUsuario.substring(2);
+      } else if (widget.usuarioToEdit!.cedulaUsuario.startsWith('E-')) {
+        _cedulaPrefix = 'E-';
+        _cedulaController.text = widget.usuarioToEdit!.cedulaUsuario.substring(2);
+      } else {
+        _cedulaController.text = widget.usuarioToEdit!.cedulaUsuario;
+      }
       _selectedRol = widget.usuarioToEdit!.rol;
     }
   }
@@ -45,17 +60,21 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
 
   void _save() async {
     if (!_formKey.currentState!.validate() || _selectedRol == null) return;
-    setState(() => _isSaving = true);
+    setState(() {
+      _isSaving = true;
+      _validationErrors = null;
+    });
 
     final service = UsuariosService();
     try {
+      final cedulaCompleta = _cedulaPrefix + _cedulaController.text;
       if (widget.usuarioToEdit == null) {
         await service.crearUsuario(
           Usuario(
             idUsuario: 0,
             nombre: _nombreController.text,
             apellido: _apellidoController.text,
-            cedulaUsuario: _cedulaController.text,
+            cedulaUsuario: cedulaCompleta,
             rol: _selectedRol!,
           ),
           _passwordController.text,
@@ -66,20 +85,56 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
             idUsuario: widget.usuarioToEdit!.idUsuario,
             nombre: _nombreController.text,
             apellido: _apellidoController.text,
-            cedulaUsuario: _cedulaController.text,
+            cedulaUsuario: cedulaCompleta,
             rol: _selectedRol!,
           ),
           password: _passwordController.text.isNotEmpty ? _passwordController.text : null,
         );
       }
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.usuarioToEdit == null
+                ? 'Usuario registrado exitosamente.'
+                : 'Usuario actualizado exitosamente.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
+    } on ValidationException catch (e) {
+      setState(() {
+        _validationErrors = e.errors;
+      });
+      if (e.errors['general'] != null) {
+        _showErrorSnackBar(e.errors['general']!.join(', '));
+      }
+      _formKey.currentState!.validate();
+    } on ApiException catch (e) {
+      _showErrorSnackBar('Error: ${e.message}');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      _showErrorSnackBar('Ocurrió un error inesperado. Intenta de nuevo.');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  String? _fieldError(String field) {
+    if (_validationErrors != null && _validationErrors![field] != null) {
+      return _validationErrors![field]!.join('\n');
+    }
+    return null;
   }
 
   @override
@@ -91,7 +146,7 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'EDITAR USUARIO' : 'REGISTRAR USUARIO', style: TextStyle(fontWeight: FontWeight.bold),),
+        title: Text(isEditing ? 'EDITAR USUARIO' : 'REGISTRAR USUARIO', style: const TextStyle(fontWeight: FontWeight.bold),),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.textTitle,
       ),
@@ -110,7 +165,6 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Título dentro de la card
                     Text(
                       isEditing ? 'Editando usuario' : 'Agregar Usuario',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -127,7 +181,11 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
                         border: OutlineInputBorder(),
                         contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       ),
-                      validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Campo requerido';
+                        final err = _fieldError('nombre');
+                        return err;
+                      },
                     ),
                     const SizedBox(height: 10),
                     TextFormField(
@@ -137,17 +195,69 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
                         border: OutlineInputBorder(),
                         contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       ),
-                      validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Campo requerido';
+                        final err = _fieldError('apellido');
+                        return err;
+                      },
                     ),
                     const SizedBox(height: 10),
-                    TextFormField(
-                      controller: _cedulaController,
-                      decoration: const InputDecoration(
-                        labelText: 'Cédula',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                      ),
-                      validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
+                    // --- CAMPO CÉDULA IGUAL QUE EN ESTUDIANTES ---
+                    Row(
+                      children: [
+                        DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _cedulaPrefix,
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'V-',
+                                child: Text('V-'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'E-',
+                                child: Text('E-'),
+                              ),
+                            ],
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                setState(() {
+                                  _cedulaPrefix = newValue;
+                                });
+                              }
+                            },
+                            dropdownColor: Theme.of(context).cardColor,
+                            icon: const Icon(Icons.arrow_drop_down),
+                            elevation: 8,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        const SizedBox(width: 8.0),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _cedulaController,
+                            decoration: const InputDecoration(
+                              labelText: 'Cédula',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                            ),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(9),
+                            ],
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Campo requerido';
+                              }
+                              if (value.length < 7 || value.length > 9) {
+                                return 'La cédula debe tener entre 7 y 9 dígitos.';
+                              }
+                              final err = _fieldError('cedula_usuario');
+                              return err;
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
@@ -164,7 +274,11 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
                         border: OutlineInputBorder(),
                         contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       ),
-                      validator: (v) => v == null ? 'Selecciona un rol' : null,
+                      validator: (v) {
+                        if (v == null) return 'Selecciona un rol';
+                        final err = _fieldError('rol');
+                        return err;
+                      },
                     ),
                     const SizedBox(height: 10),
                     TextFormField(
@@ -179,7 +293,8 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
                         if (!isEditing && (v == null || v.isEmpty)) {
                           return 'Campo requerido';
                         }
-                        return null;
+                        final err = _fieldError('password');
+                        return err;
                       },
                     ),
                     const SizedBox(height: 24),

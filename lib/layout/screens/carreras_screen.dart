@@ -3,6 +3,7 @@ import 'package:smged/api/models/carrera.dart';
 import 'package:smged/api/services/carreras_service.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'forms/carrera_form_screen.dart';
+import 'package:smged/api/exceptions/api_exception.dart';
 
 class CarrerasScreen extends StatefulWidget {
   const CarrerasScreen({super.key});
@@ -44,10 +45,12 @@ class _CarrerasScreenState extends State<CarrerasScreen> {
         _carreras = data;
         _filteredCarreras = data;
       });
+    } on NetworkException catch (e) {
+      _showErrorSnackBar('Problema de conexión: ${e.message}');
+    } on ApiException catch (e) {
+      _showErrorSnackBar('Error: ${e.message}');
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
+      _showErrorSnackBar('Error inesperado al cargar carreras.');
     } finally {
       setState(() {
         _isLoading = false;
@@ -101,9 +104,26 @@ class _CarrerasScreenState extends State<CarrerasScreen> {
       ),
     );
     if (confirm == true) {
-      await _service.eliminarCarrera(id);
-      _fetchCarreras();
+      try {
+        await _service.eliminarCarrera(id);
+        _fetchCarreras();
+      } on ApiException catch (e) {
+        _showErrorSnackBar('Error: ${e.message}');
+      } catch (e) {
+        _showErrorSnackBar('Error inesperado al eliminar carrera.');
+      }
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   @override
@@ -136,8 +156,6 @@ class _CarrerasScreenState extends State<CarrerasScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(child: Text(_error!))
           : LayoutBuilder(
               builder: (context, constraints) {
                 return Column(

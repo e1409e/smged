@@ -1,6 +1,7 @@
 // lib/layout/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/services.dart'; // <-- Agrega esta línea
 import 'package:smged/api/models/login_request.dart';
 import 'package:smged/api/models/login_response.dart';
 import 'package:smged/api/services/auth_service.dart';
@@ -32,6 +33,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // Prefijo de cédula (V- o E-)
+  String _cedulaPrefix = 'V-';
+
   // Función para manejar la navegación a la pantalla adecuada según el rol
   // Esta función ahora está obsoleto con el enfoque de `home` en main.dart
   // y se eliminará.
@@ -49,10 +53,11 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     debugPrint('[_LoginScreenState] Estado de carga y error reseteados.');
 
-    final cedulaUsuario = _cedulaUsuarioController.text.trim();
+    // CORREGIDO: Siempre concatena el prefijo seleccionado
+    final cedulaUsuario = _cedulaPrefix + _cedulaUsuarioController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (cedulaUsuario.isEmpty || password.isEmpty) {
+    if (_cedulaUsuarioController.text.trim().isEmpty || password.isEmpty) {
       setState(() {
         _errorMessage = 'Por favor, ingresa tu cédula y contraseña.';
         _isLoading = false;
@@ -161,26 +166,64 @@ class _LoginScreenState extends State<LoginScreen> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 48.0),
-                    TextField(
-                      controller: _cedulaUsuarioController,
-                      decoration: InputDecoration(
-                        labelText: 'Cédula',
-                        hintText: 'Ingrese su número de cédula',
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.person),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: AppColors.primary,
-                            width: 2.0,
+                    // --- CAMPO DE CÉDULA CON PREFIJO ---
+                    Row(
+                      children: [
+                        DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _cedulaPrefix,
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'V-',
+                                child: Text('V-'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'E-',
+                                child: Text('E-'),
+                              ),
+                            ],
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                setState(() {
+                                  _cedulaPrefix = newValue;
+                                });
+                              }
+                            },
+                            dropdownColor: Theme.of(context).cardColor,
+                            icon: const Icon(Icons.arrow_drop_down),
+                            elevation: 8,
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
-                          borderRadius: BorderRadius.circular(5.0),
                         ),
-                        labelStyle: TextStyles.label,
-                        floatingLabelStyle: TextStyles.labelfocus,
-                      ),
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.next,
-                      cursorColor: AppColors.primary,
+                        const SizedBox(width: 8.0),
+                        Expanded(
+                          child: TextField(
+                            controller: _cedulaUsuarioController,
+                            decoration: InputDecoration(
+                              labelText: 'Cédula',
+                              hintText: 'Ingrese su número de cédula',
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.person),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: AppColors.primary,
+                                  width: 2.0,
+                                ),
+                                borderRadius: BorderRadius.circular(5.0),
+                              ),
+                              labelStyle: TextStyles.label,
+                              floatingLabelStyle: TextStyles.labelfocus,
+                            ),
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.next,
+                            cursorColor: AppColors.primary,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(15),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16.0),
                     TextField(

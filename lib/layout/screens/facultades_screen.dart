@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smged/api/models/facultad.dart';
 import 'package:smged/api/services/facultades_service.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
+import 'package:smged/api/exceptions/api_exception.dart';
 
 class FacultadesScreen extends StatefulWidget {
   const FacultadesScreen({super.key});
@@ -15,7 +16,6 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
   List<Facultad> _facultades = [];
   List<Facultad> _filteredFacultades = [];
   bool _isLoading = true;
-  String? _error;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -35,7 +35,6 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
   Future<void> _fetchFacultades() async {
     setState(() {
       _isLoading = true;
-      _error = null;
     });
     try {
       final data = await _service.obtenerFacultades();
@@ -43,10 +42,12 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
         _facultades = data;
         _filteredFacultades = data;
       });
+    } on NetworkException catch (e) {
+      _showErrorSnackBar('Problema de conexión: ${e.message}');
+    } on ApiException catch (e) {
+      _showErrorSnackBar('Error: ${e.message}');
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
+      _showErrorSnackBar('Error inesperado al cargar facultades.');
     } finally {
       setState(() {
         _isLoading = false;
@@ -100,9 +101,26 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
       ),
     );
     if (confirm == true) {
-      await _service.eliminarFacultad(id);
-      _fetchFacultades();
+      try {
+        await _service.eliminarFacultad(id);
+        _fetchFacultades();
+      } on ApiException catch (e) {
+        _showErrorSnackBar('Error: ${e.message}');
+      } catch (e) {
+        _showErrorSnackBar('Error inesperado al eliminar facultad.');
+      }
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   @override
@@ -135,8 +153,6 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(child: Text(_error!))
           : LayoutBuilder(
               builder: (context, constraints) {
                 return Column(
@@ -216,10 +232,9 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
                                                   Icons.delete,
                                                   color: AppColors.error,
                                                 ),
-                                                onPressed: () =>
-                                                    _deleteFacultad(
-                                                      facultad.idFacultad,
-                                                    ),
+                                                onPressed: () => _deleteFacultad(
+                                                  facultad.idFacultad,
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -252,6 +267,7 @@ class _FacultadFormDialogState extends State<FacultadFormDialog> {
   late TextEditingController _facultadController;
   late TextEditingController _siglasController;
   bool _isSaving = false;
+  Map<String, List<String>>? _validationErrors;
 
   @override
   void initState() {
@@ -272,6 +288,9 @@ class _FacultadFormDialogState extends State<FacultadFormDialog> {
   }
 
   void _save() async {
+    setState(() {
+      _validationErrors = null;
+    });
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
@@ -290,13 +309,39 @@ class _FacultadFormDialogState extends State<FacultadFormDialog> {
         );
       }
       Navigator.pop(context, true);
+    } on ValidationException catch (e) {
+      setState(() {
+        _validationErrors = e.errors;
+      });
+      if (e.errors['general'] != null) {
+        _showErrorSnackBar(e.errors['general']!.join(', '));
+      }
+      _formKey.currentState!.validate();
+    } on ApiException catch (e) {
+      _showErrorSnackBar('Error: ${e.message}');
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      _showErrorSnackBar('Error inesperado al guardar facultad.');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  String? _fieldError(String field) {
+    if (_validationErrors != null && _validationErrors![field] != null) {
+      return _validationErrors![field]!.join('\n');
+    }
+    return null;
   }
 
   @override
@@ -316,19 +361,24 @@ class _FacultadFormDialogState extends State<FacultadFormDialog> {
                 labelText: 'Nombre de la Facultad',
                 border: OutlineInputBorder(),
               ),
-
-              validator: (v) =>
-                  v == null || v.isEmpty ? 'Campo requerido' : null,
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Campo requerido';
+                final err = _fieldError('facultad');
+                return err;
+              },
             ),
-            Text(''),
+            const SizedBox(height: 10),
             TextFormField(
               controller: _siglasController,
               decoration: const InputDecoration(
                 labelText: 'Siglas',
                 border: OutlineInputBorder(),
               ),
-              validator: (v) =>
-                  v == null || v.isEmpty ? 'Campo requerido' : null,
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Campo requerido';
+                final err = _fieldError('siglas');
+                return err;
+              },
             ),
           ],
         ),

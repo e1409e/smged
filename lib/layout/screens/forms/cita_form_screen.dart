@@ -10,6 +10,7 @@ import 'package:smged/api/services/citas_service.dart'; // Importa el servicio d
 import 'package:smged/api/services/estudiantes_service.dart'; // Importa el servicio de Estudiantes
 import 'package:collection/collection.dart'; // Para firstWhereOrNull
 import 'package:smged/layout/widgets/custom_dropdown_button.dart'; //widget de dropdown con buscador
+import 'package:smged/api/exceptions/api_exception.dart';
 
 class CitaFormScreen extends StatefulWidget {
   final Cita? citaToEdit;
@@ -41,6 +42,8 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
     {'label': 'Cita Pendiente', 'value': 1},
     {'label': 'Cita Realizada', 'value': 0},
   ];
+
+  Map<String, List<String>>? _validationErrors;
 
   @override
   void initState() {
@@ -109,45 +112,27 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
   }
 
   Future<void> _saveCita() async {
+    setState(() {
+      _validationErrors = null;
+    });
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     // Validación de campos obligatorios
     if (_fechaCita == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor, selecciona la fecha de la cita.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      _showErrorSnackBar('Por favor, selecciona la fecha de la cita.');
       return;
     }
-
     if (_selectedPendiente == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Por favor, selecciona el estado de la cita (Pendiente/Realizada).',
-          ),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      _showErrorSnackBar('Por favor, selecciona el estado de la cita (Pendiente/Realizada).');
+      return;
+    }
+    if (_selectedEstudiante == null || _selectedEstudiante!.idEstudiante == null) {
+      _showErrorSnackBar('Por favor, selecciona un estudiante.');
       return;
     }
 
-    if (_selectedEstudiante == null ||
-        _selectedEstudiante!.idEstudiante == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor, selecciona un estudiante.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    // Muestra un indicador de carga
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -155,9 +140,7 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
               ? 'Creando cita...'
               : 'Actualizando cita...',
         ),
-        duration: const Duration(
-          seconds: 2,
-        ), // Duración más larga para visibilidad
+        duration: const Duration(seconds: 2),
         backgroundColor: AppColors.info,
       ),
     );
@@ -166,9 +149,7 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
       final String? motivoCita = _motivoCitaController.text.isNotEmpty
           ? _motivoCitaController.text
           : null;
-      final int? idEstudiante =
-          _selectedEstudiante!.idEstudiante; // Ya validado que no es null
-
+      final int? idEstudiante = _selectedEstudiante!.idEstudiante;
       final bool isEditing = widget.citaToEdit != null;
       final int? currentCitaId = widget.citaToEdit?.id_citas;
 
@@ -177,7 +158,7 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
         motivo_cita: motivoCita,
         fecha_cita: _fechaCita!,
         pendiente: _selectedPendiente!,
-        id_estudiante: idEstudiante!, // Ya validado que no es null
+        id_estudiante: idEstudiante!,
       );
 
       if (isEditing) {
@@ -186,17 +167,9 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
         await _citasService.crearCita(citaPayload);
       }
 
-      // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
-      if (!mounted) {
-        debugPrint(
-          '[_CitaFormScreenState] Widget desmontado. No se puede actualizar UI después de guardar.',
-        );
-        return; // Salir si el widget ya no está montado
-      }
+      if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).hideCurrentSnackBar(); // Oculta el SnackBar de "Guardando..."
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -205,31 +178,38 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
           backgroundColor: Colors.green,
         ),
       );
-
-      // Regresa a la pantalla anterior indicando éxito
       Navigator.of(context).pop(true);
-    } catch (e) {
-      // [CAMBIO]: ¡VERIFICACIÓN DE mounted AQUÍ!
-      if (!mounted) {
-        debugPrint(
-          '[_CitaFormScreenState] Widget desmontado. No se puede actualizar UI después de error al guardar.',
-        );
-        return; // Salir si el widget ya no está montado
+    } on ValidationException catch (e) {
+      setState(() {
+        _validationErrors = e.errors;
+      });
+      if (e.errors['general'] != null) {
+        _showErrorSnackBar(e.errors['general']!.join(', '));
       }
-
-      ScaffoldMessenger.of(
-        context,
-      ).hideCurrentSnackBar(); // Oculta cualquier SnackBar anterior
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Error al ${widget.citaToEdit != null ? 'actualizar' : 'guardar'} cita: ${e.toString().replaceFirst('Exception: ', '')}',
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
-      debugPrint('Error al guardar/actualizar cita: $e'); // Para depuración
+      _formKey.currentState!.validate();
+    } on ApiException catch (e) {
+      _showErrorSnackBar('Error: ${e.message}');
+    } catch (e) {
+      _showErrorSnackBar('Error inesperado al guardar la cita.');
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  String? _fieldError(String field) {
+    if (_validationErrors != null && _validationErrors![field] != null) {
+      return _validationErrors![field]!.join('\n');
+    }
+    return null;
   }
 
   void _submitForm() {
@@ -303,6 +283,10 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
                           prefixIcon: Icon(Icons.description),
                         ),
                         maxLines: 3,
+                        validator: (v) {
+                          final err = _fieldError('motivo_cita');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 16.0),
                       DatePickerFormField(
@@ -355,7 +339,8 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
                           if (value == null) {
                             return 'Por favor, selecciona el estado de la cita.';
                           }
-                          return null;
+                          final err = _fieldError('pendiente');
+                          return err;
                         },
                       ),
                       const SizedBox(height: 16.0),
@@ -387,7 +372,8 @@ class _CitaFormScreenState extends State<CitaFormScreen> {
                           if (value == null) {
                             return 'Por favor, selecciona un estudiante.';
                           }
-                          return null;
+                          final err = _fieldError('id_estudiante');
+                          return err;
                         },
                         // --- ¡NUEVOS PARÁMETROS REQUERIDOS! ---
                         // Cómo mostrar el texto en el dropdown y en la lista de búsqueda

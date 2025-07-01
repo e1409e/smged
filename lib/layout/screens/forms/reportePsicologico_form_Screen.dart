@@ -5,6 +5,7 @@ import 'package:smged/api/models/reporte_psicologico.dart';
 import 'package:smged/api/services/estudiantes_service.dart';
 import 'package:smged/api/services/reporte_psicologico_service.dart';
 import 'package:collection/collection.dart';
+import 'package:smged/layout/widgets/custom_dropdown_button.dart';
 
 class ReportePsicologicoFormScreen extends StatefulWidget {
   final ReportePsicologico? reporteToEdit;
@@ -59,7 +60,6 @@ class _ReportePsicologicoFormScreenState extends State<ReportePsicologicoFormScr
           _motivoController.text = reporte.motivoConsulta;
           _sintesisController.text = reporte.sintesisDiagnostica;
           _recomendacionesController.text = reporte.recomendaciones;
-          // El estudiante se selecciona en _fetchEstudiantes
         }
       } else if (widget.idEstudianteFijo != null) {
         _idEstudianteFijoArg = widget.idEstudianteFijo;
@@ -77,7 +77,6 @@ class _ReportePsicologicoFormScreenState extends State<ReportePsicologicoFormScr
       final data = await _estudiantesService.obtenerTodosLosEstudiantes();
       setState(() {
         _estudiantes = data;
-        // Selección de estudiante para edición o estudiante fijo
         final args = ModalRoute.of(context)?.settings.arguments;
         ReportePsicologico? reporteToEdit;
         int? idEstudianteFijo;
@@ -108,6 +107,14 @@ class _ReportePsicologicoFormScreenState extends State<ReportePsicologicoFormScr
         _isLoadingEstudiantes = false;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _motivoController.dispose();
+    _sintesisController.dispose();
+    _recomendacionesController.dispose();
+    super.dispose();
   }
 
   Future<void> _save() async {
@@ -177,15 +184,17 @@ class _ReportePsicologicoFormScreenState extends State<ReportePsicologicoFormScr
       }
     }
     final bool isEdit = reporteToEdit != null;
-
     final bool estudianteFieldDisabled = idEstudianteFijo != null || isEdit;
-
     final bool esEscritorio = MediaQuery.of(context).size.width > 700;
     final double formWidth = esEscritorio ? 500 : double.infinity;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEdit ? 'Editar Reporte Psicológico' : 'Agregar Reporte Psicológico'),
+        title: Text(
+          widget.reporteToEdit == null
+              ? 'Agregar Reporte Psicológico'
+              : 'Editar Reporte Psicológico',
+        ),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -209,7 +218,9 @@ class _ReportePsicologicoFormScreenState extends State<ReportePsicologicoFormScr
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        isEdit ? 'Editar Reporte Psicológico' : 'Nuevo Reporte Psicológico',
+                        widget.reporteToEdit == null
+                            ? 'Nuevo Reporte Psicológico'
+                            : 'Editar Reporte Psicológico',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: AppColors.primary,
@@ -217,56 +228,70 @@ class _ReportePsicologicoFormScreenState extends State<ReportePsicologicoFormScr
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 20.0),
-                      DropdownButtonFormField<Estudiante>(
+                      CustomDropdownButton<Estudiante>(
+                        labelText: 'Estudiante',
+                        hintText: 'Selecciona un estudiante',
+                        prefixIcon: Icons.person_search,
+                        isLoading: _isLoadingEstudiantes,
+                        errorMessage: _estudiantesError,
+                        items: _estudiantes,
                         value: _selectedEstudiante,
-                        items: _estudiantes
-                            .map((e) => DropdownMenuItem(
-                                  value: e,
-                                  child: Text('${e.nombres} ${e.apellidos} (${e.cedula})'),
-                                ))
-                            .toList(),
-                        onChanged: estudianteFieldDisabled
-                            ? null
-                            : (value) => setState(() => _selectedEstudiante = value),
-                        decoration: InputDecoration(
-                          labelText: 'Estudiante',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        validator: (value) => value == null ? 'Seleccione un estudiante' : null,
+                        onChanged: (newValue) {
+                          if (!estudianteFieldDisabled) {
+                            setState(() {
+                              _selectedEstudiante = newValue;
+                            });
+                          }
+                        },
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Seleccione un estudiante';
+                          }
+                          return null;
+                        },
+                        itemDisplayText: (estudiante) =>
+                            '${estudiante.nombres} ${estudiante.apellidos}',
+                        itemSearchFilter: (estudiante, query) {
+                          final fullText =
+                              '${estudiante.nombres} ${estudiante.apellidos} ${estudiante.cedula}'
+                                  .toLowerCase();
+                          return fullText.contains(query.toLowerCase());
+                        },
+                        enabled: !estudianteFieldDisabled,
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 16.0),
                       TextFormField(
                         controller: _motivoController,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Motivo de Consulta',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          prefixIcon: const Icon(Icons.psychology),
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.psychology),
                         ),
-                        maxLines: 2,
+                        maxLines: 3,
                         validator: (value) =>
                             value == null || value.trim().isEmpty ? 'Ingrese el motivo de consulta' : null,
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 16.0),
                       TextFormField(
                         controller: _sintesisController,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Síntesis Diagnóstica',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          prefixIcon: const Icon(Icons.description),
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.description),
                         ),
-                        maxLines: 2,
+                        maxLines: 3,
                         validator: (value) =>
                             value == null || value.trim().isEmpty ? 'Ingrese la síntesis diagnóstica' : null,
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 16.0),
                       TextFormField(
                         controller: _recomendacionesController,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Recomendaciones',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          prefixIcon: const Icon(Icons.recommend),
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.recommend),
                         ),
-                        maxLines: 2,
+                        maxLines: 3,
                         validator: (value) =>
                             value == null || value.trim().isEmpty ? 'Ingrese las recomendaciones' : null,
                       ),
@@ -283,12 +308,16 @@ class _ReportePsicologicoFormScreenState extends State<ReportePsicologicoFormScr
                                     color: Colors.white,
                                   ),
                                 )
-                              : Icon(isEdit ? Icons.save : Icons.add),
-                          label: Text(isEdit ? 'Guardar Cambios' : 'Agregar Reporte'),
+                              : const Icon(Icons.save),
+                          label: Text(
+                            widget.reporteToEdit == null
+                                ? 'Registrar Reporte'
+                                : 'Actualizar Reporte',
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),

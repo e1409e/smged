@@ -11,6 +11,7 @@ import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/layout/widgets/search_bar_widget.dart';
 import 'package:smged/layout/screens/forms/cita_form_screen.dart';
 import 'package:smged/layout/utils/citas_utils.dart'; 
+import 'package:smged/api/exceptions/api_exception.dart';
 
 class CitasScreen extends StatefulWidget {
   const CitasScreen({super.key});
@@ -24,7 +25,6 @@ class _CitasScreenState extends State<CitasScreen> {
   List<Cita> _citas = [];
   List<Cita> _filteredCitas = [];
   bool _isLoading = true;
-  String? _errorMessage;
 
   int? _sortColumnIndex;
   bool _sortAscending = true;
@@ -51,7 +51,6 @@ class _CitasScreenState extends State<CitasScreen> {
   Future<void> _fetchCitas() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
     try {
       final fetchedCitas = await _citasService.obtenerCitas(); // Usamos el método del servicio de citas
@@ -62,11 +61,12 @@ class _CitasScreenState extends State<CitasScreen> {
         _sortColumnIndex = null; // Reiniciar ordenación
         _sortAscending = true;
       });
+    } on NetworkException catch (e) {
+      _showErrorSnackBar('Problema de conexión: ${e.message}');
+    } on ApiException catch (e) {
+      _showErrorSnackBar('Error: ${e.message}');
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = 'Error al cargar citas: ${e.toString().replaceFirst('Exception: ', '')}';
-      });
+      _showErrorSnackBar('Error inesperado al cargar citas.');
     } finally {
       if (mounted) {
         setState(() {
@@ -74,6 +74,17 @@ class _CitasScreenState extends State<CitasScreen> {
         });
       }
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   void _onSort(int columnIndex, bool ascending) {
@@ -250,8 +261,7 @@ class _CitasScreenState extends State<CitasScreen> {
 
                   ScaffoldMessenger.of(context).hideCurrentSnackBar();
                   setState(() {
-                    _errorMessage =
-                        'Error al eliminar cita: ${e.toString().replaceFirst('Exception: ', '')}';
+                    _showErrorSnackBar('Error al eliminar cita: ${e.toString().replaceFirst('Exception: ', '')}');
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -375,8 +385,7 @@ class _CitasScreenState extends State<CitasScreen> {
 
                   ScaffoldMessenger.of(context).hideCurrentSnackBar();
                   setState(() {
-                    _errorMessage =
-                        'Error al marcar cita como realizada: ${e.toString().replaceFirst('Exception: ', '')}';
+                    _showErrorSnackBar('Error al marcar cita como realizada: ${e.toString().replaceFirst('Exception: ', '')}');
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -519,98 +528,86 @@ class _CitasScreenState extends State<CitasScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: AppColors.error, fontSize: 18),
-                      textAlign: TextAlign.center,
+          : Padding(
+              padding: const EdgeInsets.all(15.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SearchBarWidget(
+                    controller: _searchController,
+                    hintText: 'Buscar cita por estudiante, motivo o fecha...',
+                    onChanged: (query) => _filterCitas(),
+                  ),
+                  const SizedBox(height: 15.0),
+                  Expanded(
+                    child: Card(
+                      elevation: 8.0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.max,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: 8.0,
+                              top: 8.0,
+                              left: 12.0,
+                              right: 12.0,
+                            ),
+                            child: Text(
+                              'LISTA DE CITAS',
+                              textAlign: TextAlign.left,
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                            ),
+                          ),
+                          const Divider(),
+                          _filteredCitas.isEmpty
+                              ? const Expanded(
+                                  child: Center(
+                                    child: Text(
+                                      'No hay citas registradas o no se encontraron resultados.',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                )
+                              : Expanded(
+                                  child: CustomDataTable<Cita>(
+                                    data: _filteredCitas,
+                                    columns: citaColumns,
+                                    minWidth: 900,
+                                    actionCallbacks: _isActionMode
+                                        ? {
+                                            'edit': _handleEditCita,
+                                            'delete': _handleDeleteCita,
+                                            'mark_realized': _handleMarkAsRealized,
+                                          }
+                                        : {
+                                            'info': _handleInfoCita,
+                                          },
+                                    sortColumnIndex: _sortColumnIndex,
+                                    sortAscending: _sortAscending,
+                                  ),
+                                ),
+                        ],
+                      ),
                     ),
                   ),
-                )
-              : Padding(
-                  padding: const EdgeInsets.all(15.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SearchBarWidget(
-                        controller: _searchController,
-                        hintText: 'Buscar cita por estudiante, motivo o fecha...',
-                        onChanged: (query) => _filterCitas(),
-                      ),
-                      const SizedBox(height: 15.0),
-                      Expanded(
-                        child: Card(
-                          elevation: 8.0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: 8.0,
-                                  top: 8.0,
-                                  left: 12.0,
-                                  right: 12.0,
-                                ),
-                                child: Text(
-                                  'LISTA DE CITAS',
-                                  textAlign: TextAlign.left,
-                                  style: Theme.of(context).textTheme.headlineSmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.primary,
-                                      ),
-                                ),
-                              ),
-                              const Divider(),
-                              _filteredCitas.isEmpty
-                                  ? const Expanded(
-                                      child: Center(
-                                        child: Text(
-                                          'No hay citas registradas o no se encontraron resultados.',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: Colors.grey,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                    )
-                                  : Expanded(
-                                      child: CustomDataTable<Cita>(
-                                        data: _filteredCitas,
-                                        columns: citaColumns,
-                                        minWidth:
-                                            900, // Ajustar minWidth según las columnas
-                                        // >>> INICIO DE CAMBIOS EN ACTIONCALLBACKS <<<
-                                        actionCallbacks: _isActionMode
-                                            ? {
-                                                'edit': _handleEditCita,
-                                                'delete': _handleDeleteCita,
-                                                'mark_realized':
-                                                    _handleMarkAsRealized,
-                                              }
-                                            : {
-                                                'info': _handleInfoCita, // Solo info en modo de información
-                                              },
-                                        // <<< FIN DE CAMBIOS EN ACTIONCALLBACKS <<<
-                                        sortColumnIndex: _sortColumnIndex,
-                                        sortAscending: _sortAscending,
-                                      ),
-                                    ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                ],
+              ),
+            ),
     );
   }
+
+  // En _handleDeleteCita y _handleMarkAsRealized, usa _showErrorSnackBar en los catch
+  // ...no cambies la lógica, solo asegúrate de mostrar errores en SnackBar...
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smged/api/models/usuario.dart';
 import 'package:smged/api/services/usuarios_service.dart';
+import 'package:smged/api/exceptions/api_exception.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'forms/usuario_form_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -68,10 +69,16 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
         _filteredUsuarios = data;
       });
       _filterUsuarios();
+    } on ApiException catch (e) {
+      setState(() {
+        _error = e.message;
+      });
+      _showErrorDialog(context, e.toString());
     } catch (e) {
       setState(() {
         _error = e.toString();
       });
+      _showErrorDialog(context, e.toString());
     } finally {
       setState(() {
         _isLoading = false;
@@ -98,6 +105,10 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
         builder: (context) => UsuarioFormScreen(usuarioToEdit: usuario),
       ),
     );
+    if (result is ApiException) {
+      _showErrorDialog(context, result.toString());
+      return;
+    }
     if (result == true) {
       // Si el usuario editado es el mismo que está en sesión, cerrar sesión
       if (usuario != null && usuario.cedulaUsuario == _miCedula) {
@@ -114,7 +125,6 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
     }
   }
 
-  // Cambia la función de eliminar para validar correctamente la cédula
   void _deleteUsuario(int idUsuario) async {
     if (idUsuario == _miIdUsuario) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -144,8 +154,14 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
       ),
     );
     if (confirm == true) {
-      await _service.eliminarUsuario(idUsuario);
-      _fetchUsuarios();
+      try {
+        await _service.eliminarUsuario(idUsuario);
+        _fetchUsuarios();
+      } on ApiException catch (e) {
+        _showErrorDialog(context, e.toString());
+      } catch (e) {
+        _showErrorDialog(context, e.toString());
+      }
     }
   }
 
@@ -343,6 +359,22 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
           ),
         );
       }).toList(),
+    );
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            child: const Text('Cerrar'),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
     );
   }
 

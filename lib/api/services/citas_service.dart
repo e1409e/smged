@@ -1,199 +1,189 @@
 // lib/api/services/citas_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
-import 'dart:io' show Platform;
-import 'dart:typed_data'; // Importar para utf8.decode
 import 'package:smged/config.dart';
-import 'package:smged/api/models/cita.dart'; // Asegúrate de que este import sea correcto
+import 'package:smged/api/models/cita.dart';
+import 'package:smged/api/exceptions/api_exception.dart';
 
 class CitasService {
-  // Ajusta esta URL según tu entorno (desarrollo/producción)
-  final String _baseUrl = Config.apiUrl; 
+  final String _baseUrl = '${Config.apiUrl}/citas';
 
-  // Método para obtener todas las citas
   Future<List<Cita>> obtenerCitas() async {
-    final uri = Uri.parse('$_baseUrl/citas');
-    debugPrint('GET: $uri');
-
+    final uri = Uri.parse(_baseUrl);
     try {
       final response = await http.get(uri);
-
       if (response.statusCode == 200) {
         List<dynamic> jsonList = json.decode(utf8.decode(response.bodyBytes));
         return jsonList.map((json) => Cita.fromJson(json)).toList();
       } else {
-        // Mejorar manejo de errores decodificando el cuerpo
-        final errorBody = json.decode(utf8.decode(response.bodyBytes));
-        debugPrint('Error al obtener citas: ${response.statusCode} - ${errorBody['error'] ?? 'No hay mensaje de error'}');
-        throw Exception(errorBody['error'] ?? 'Error al cargar las citas');
+        _handleError(response);
       }
     } catch (e) {
-      debugPrint('Excepción al obtener citas: $e');
-      throw Exception('Problema de conexión o error inesperado: ${e.toString().replaceFirst('Exception: ', '')}');
+      if (e is ApiException) rethrow;
+      throw NetworkException('No se pudo conectar con el servidor de citas.');
     }
+    throw UnknownApiException('Error desconocido al obtener citas');
   }
 
-  // Método para crear una nueva cita
-  Future<Cita> crearCita(Cita cita) async {
-    final uri = Uri.parse('$_baseUrl/citas');
-    debugPrint('POST: $uri');
-    debugPrint('Body: ${json.encode(cita.toJson())}');
+  Future<Cita> obtenerCitaPorId(int idCita) async {
+    final uri = Uri.parse('$_baseUrl/$idCita');
+    try {
+      final response = await http.get(uri);
+      if (response.statusCode == 200) {
+        return Cita.fromJson(json.decode(utf8.decode(response.bodyBytes)));
+      } else {
+        _handleError(response);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw NetworkException('No se pudo conectar con el servidor de citas.');
+    }
+    throw UnknownApiException('Error desconocido al obtener la cita');
+  }
 
+  Future<Cita> crearCita(Cita cita) async {
+    final uri = Uri.parse(_baseUrl);
     try {
       final response = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
         body: json.encode(cita.toJson()),
       );
-
-      debugPrint('Crear Cita - Status: ${response.statusCode}');
-      debugPrint('Crear Cita - Response Body: ${utf8.decode(response.bodyBytes)}');
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
+      if (response.statusCode == 201) {
         final Map<String, dynamic> responseBody = json.decode(utf8.decode(response.bodyBytes));
         if (responseBody.containsKey('id_citas')) {
-          
           return cita.copyWith(id_citas: responseBody['id_citas'] as int);
         } else {
-          // Si por alguna razón el ID no viene, podrías lanzar un error o devolver la cita original.
-          throw Exception('La API no devolvió el id_citas al crear la cita.');
+          throw UnknownApiException('La API no devolvió el id_citas al crear la cita.');
         }
-
       } else {
-        final errorBody = json.decode(utf8.decode(response.bodyBytes));
-        debugPrint('Error al crear cita: ${response.statusCode} - ${errorBody['error'] ?? 'No hay mensaje de error'}');
-        throw Exception(errorBody['error'] ?? 'Error al crear la cita');
+        _handleError(response);
       }
     } catch (e) {
-      debugPrint('Excepción al crear cita: $e');
-      throw Exception('Problema de conexión o error inesperado: ${e.toString().replaceFirst('Exception: ', '')}');
+      if (e is ApiException) rethrow;
+      throw NetworkException('No se pudo conectar con el servidor de citas.');
     }
+    throw UnknownApiException('Error desconocido al crear la cita');
   }
 
-  // Método para actualizar una cita existente
   Future<Cita> actualizarCita(Cita cita) async {
     if (cita.id_citas == null) {
-      throw Exception('El ID de la cita es requerido para la actualización.');
+      throw ApiException('El ID de la cita es requerido para la actualización.');
     }
-    final uri = Uri.parse('$_baseUrl/citas/${cita.id_citas}');
-    debugPrint('PUT: $uri');
-    debugPrint('Body: ${json.encode(cita.toJson())}');
-
+    final uri = Uri.parse('$_baseUrl/${cita.id_citas}');
     try {
       final response = await http.put(
         uri,
         headers: {'Content-Type': 'application/json'},
         body: json.encode(cita.toJson()),
       );
-
-      debugPrint('Actualizar Cita - Status: ${response.statusCode}');
-      debugPrint('Actualizar Cita - Response Body: "${utf8.decode(response.bodyBytes)}".');
-
       if (response.statusCode == 200) {
+        // La API puede devolver "true" o un objeto JSON
         final String responseBodyString = utf8.decode(response.bodyBytes).trim();
-
-        // --- INICIO DE LA LÓGICA CLARA PARA ACTUALIZAR CITA ---
         if (responseBodyString.toLowerCase() == 'true') {
-          debugPrint('Actualizar Cita - API devolvió "true". Asumiendo éxito.');
-          // Si la API solo devuelve "true", la operación fue exitosa.
-          // Retorna el objeto 'cita' que recibiste, ya que ya contiene los datos actualizados.
-          return cita; 
+          return cita;
         } else if (responseBodyString.toLowerCase() == 'false') {
-          debugPrint('Actualizar Cita - API devolvió "false". Indicando fallo lógico.');
-          throw Exception('La API indicó que la actualización de la cita no fue exitosa (respuesta "false").');
+          throw ApiException('No se pudo actualizar la cita.');
         } else {
-          // Esto es un RESGUARDO por si la API de actualización cambia y devuelve un JSON.
-          // Si tu API SIEMPRE devuelve "true" o "false", esta parte nunca se ejecutará.
-          debugPrint('Actualizar Cita - API no devolvió "true"/"false". Intentando JSON...');
           try {
             final Map<String, dynamic> responseBody = json.decode(responseBodyString);
-            // Aquí podrías añadir lógica si esperas un JSON como {"success": true} o el objeto completo
             if (responseBody.containsKey('message') && responseBody['message'].contains('actualizada')) {
-              debugPrint('Actualizar Cita - JSON con mensaje de éxito.');
-              return cita; // Asume éxito por el mensaje
+              return cita;
             }
-            // Si la API devuelve el objeto Cita completo actualizado
-            // return Cita.fromJson(responseBody);
-            
-            debugPrint('Actualizar Cita - JSON inesperado o sin confirmación explícita.');
-            throw Exception('La API devolvió un JSON inesperado al actualizar: $responseBody');
-
-          } on FormatException catch (e) {
-            debugPrint('Actualizar Cita - Error al decodificar respuesta como JSON: $e');
-            throw Exception('Error al decodificar la respuesta. La API devolvió un formato inesperado: "$responseBodyString". Error: $e');
+            throw UnknownApiException('Respuesta inesperada al actualizar la cita: $responseBodyString');
+          } on FormatException {
+            throw UnknownApiException('Respuesta inesperada al actualizar la cita: $responseBodyString');
           }
         }
-
       } else {
-        final errorBody = json.decode(utf8.decode(response.bodyBytes));
-        debugPrint('Error al actualizar cita: ${response.statusCode} - ${errorBody['error'] ?? 'No hay mensaje de error'}');
-        throw Exception(errorBody['error'] ?? 'Error al actualizar la cita');
+        _handleError(response);
       }
     } catch (e) {
-      debugPrint('Excepción al actualizar cita: $e');
-      throw Exception('Problema de conexión o error inesperado: ${e.toString().replaceFirst('Exception: ', '')}');
+      if (e is ApiException) rethrow;
+      throw NetworkException('No se pudo conectar con el servidor de citas.');
     }
+    throw UnknownApiException('Error desconocido al actualizar la cita');
   }
 
-  // Método para eliminar una cita
   Future<void> eliminarCita(int idCita) async {
-    final uri = Uri.parse('$_baseUrl/citas/$idCita');
-    debugPrint('DELETE: $uri');
-
+    final uri = Uri.parse('$_baseUrl/$idCita');
     try {
       final response = await http.delete(uri);
-
-      if (response.statusCode == 204 || response.statusCode == 200) {
-        debugPrint('Cita con ID $idCita eliminada exitosamente.');
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return;
       } else {
-        final errorBody = json.decode(utf8.decode(response.bodyBytes));
-        debugPrint('Error al eliminar cita: ${response.statusCode} - ${errorBody['error'] ?? 'No hay mensaje de error'}');
-        throw Exception(errorBody['error'] ?? 'Error al eliminar la cita');
+        _handleError(response);
       }
     } catch (e) {
-      debugPrint('Excepción al eliminar cita: $e');
-      throw Exception('Problema de conexión o error inesperado: ${e.toString().replaceFirst('Exception: ', '')}');
+      if (e is ApiException) rethrow;
+      throw NetworkException('No se pudo conectar con el servidor de citas.');
     }
+    throw UnknownApiException('Error desconocido al eliminar la cita');
   }
 
-  // Función para marcar una cita como realizada
   Future<bool> marcarCitaComoRealizada(int idCita) async {
-    final uri = Uri.parse('$_baseUrl/citas/marcar-realizada/$idCita');
-    debugPrint('PATCH: $uri');
-
+    final uri = Uri.parse('$_baseUrl/marcar-realizada/$idCita');
     try {
       final response = await http.patch(uri);
-
-      debugPrint('Marcar Realizada - Status: ${response.statusCode}');
-      debugPrint('Marcar Realizada - Response Body: "${utf8.decode(response.bodyBytes)}".');
-
       if (response.statusCode == 200) {
         final String responseBodyString = utf8.decode(response.bodyBytes).trim();
         if (responseBodyString.toLowerCase() == 'true') {
-          debugPrint('Marcar Realizada - API devolvió "true".');
           return true;
         } else if (responseBodyString.toLowerCase() == 'false') {
-          debugPrint('Marcar Realizada - API devolvió "false".');
           return false;
         } else {
-          // Si la API devuelve un JSON para "marcar como realizada"
           try {
             final Map<String, dynamic> responseBody = json.decode(responseBodyString);
-            return responseBody['success'] ?? false; // Asume 'success' en la respuesta
-          } on FormatException catch (e) {
-            debugPrint('Marcar Realizada - Error decodificando JSON: $e');
-            throw Exception('Respuesta inesperada al marcar como realizada: "$responseBodyString"');
+            return responseBody['success'] ?? false;
+          } on FormatException {
+            throw UnknownApiException('Respuesta inesperada al marcar como realizada: "$responseBodyString"');
           }
         }
       } else {
-        final errorBody = json.decode(utf8.decode(response.bodyBytes));
-        debugPrint('Error al marcar cita como realizada: ${response.statusCode} - ${errorBody['error'] ?? 'No hay mensaje de error'}');
-        throw Exception(errorBody['error'] ?? 'Error al marcar la cita como realizada');
+        _handleError(response);
       }
     } catch (e) {
-      debugPrint('Excepción al marcar cita como realizada: $e');
-      throw Exception('Problema de conexión o error inesperado: ${e.toString().replaceFirst('Exception: ', '')}');
+      if (e is ApiException) rethrow;
+      throw NetworkException('No se pudo conectar con el servidor de citas.');
     }
+    throw UnknownApiException('Error desconocido al marcar cita como realizada');
+  }
+
+  /// Manejo centralizado de errores según la estructura de la API y api_exception.dart
+  void _handleError(http.Response response) {
+    final status = response.statusCode;
+    dynamic body;
+    try {
+      body = json.decode(utf8.decode(response.bodyBytes));
+    } catch (_) {
+      throw UnknownApiException('Respuesta inesperada del servidor', statusCode: status, details: response.body);
+    }
+
+    // Validaciones de express-validator (campo 'errors')
+    if (body is Map && body.containsKey('errors')) {
+      final errorsList = body['errors'] as List;
+      final Map<String, List<String>> validationErrors = {};
+      for (var error in errorsList) {
+        final field = error['param'] ?? error['path'] ?? 'general';
+        final msg = error['msg'] ?? 'Error de validación';
+        validationErrors.putIfAbsent(field, () => []).add(msg);
+      }
+      throw ValidationException('Verifica los campos ingresados.', validationErrors, statusCode: status, details: body);
+    }
+
+    // Error general (campo 'error')
+    if (body is Map && body.containsKey('error')) {
+      final msg = body['error'].toString();
+      if (status == 404) {
+        throw NotFoundException(msg, statusCode: status, details: body);
+      }
+      if (status >= 500) {
+        throw ServerException(msg, statusCode: status, details: body);
+      }
+      throw ApiException(msg, statusCode: status, details: body);
+    }
+
+    // Otros errores
+    throw UnknownApiException('Error inesperado: ${response.body}', statusCode: status, details: body);
   }
 }
