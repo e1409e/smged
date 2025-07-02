@@ -6,6 +6,7 @@ import 'package:smged/api/services/estudiantes_service.dart';
 import 'package:smged/api/services/reporte_psicologico_service.dart';
 import 'package:collection/collection.dart';
 import 'package:smged/layout/widgets/custom_dropdown_button.dart';
+import 'package:smged/api/exceptions/api_exception.dart';
 
 class ReportePsicologicoFormScreen extends StatefulWidget {
   final ReportePsicologico? reporteToEdit;
@@ -117,12 +118,41 @@ class _ReportePsicologicoFormScreenState extends State<ReportePsicologicoFormScr
     super.dispose();
   }
 
+  // Métodos para mostrar SnackBar con colores personalizados
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _showInfoSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.blue,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedEstudiante == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Seleccione un estudiante')),
-      );
+      _showErrorSnackBar('Seleccione un estudiante');
       return;
     }
     setState(() {
@@ -146,23 +176,19 @@ class _ReportePsicologicoFormScreenState extends State<ReportePsicologicoFormScr
     try {
       if (reporteToEdit == null) {
         await _reportePsicologicoService.crearReportePsicologico(reporte);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Reporte psicológico creado exitosamente')),
-        );
+        _showSuccessSnackBar('Reporte psicológico creado exitosamente');
       } else {
         await _reportePsicologicoService.editarReportePsicologico(
           reporteToEdit.idPsicologico!,
           reporte,
         );
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Reporte psicológico actualizado exitosamente')),
-        );
+        _showInfoSnackBar('Reporte psicológico actualizado exitosamente');
       }
       if (mounted) Navigator.of(context).pop(true);
+    } on ApiException catch (e) {
+      _showErrorSnackBar('Error: ${e.message}');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      _showErrorSnackBar('Error: $e');
     } finally {
       setState(() {
         _isSaving = false;

@@ -1,54 +1,56 @@
 import 'package:flutter/material.dart';
-import 'package:smged/api/models/facultad.dart';
-import 'package:smged/api/services/facultades_service.dart';
+import 'package:smged/api/models/discapacidad.dart';
+import 'package:smged/api/services/discapacidades_service.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/api/exceptions/api_exception.dart';
 import 'package:smged/layout/widgets/search_bar_widget.dart';
 
-class FacultadesScreen extends StatefulWidget {
-  const FacultadesScreen({super.key});
+class DiscapacidadesScreen extends StatefulWidget {
+  const DiscapacidadesScreen({super.key});
 
   @override
-  State<FacultadesScreen> createState() => _FacultadesScreenState();
+  State<DiscapacidadesScreen> createState() => _DiscapacidadesScreenState();
 }
 
-class _FacultadesScreenState extends State<FacultadesScreen> {
-  final FacultadesService _service = FacultadesService();
-  List<Facultad> _facultades = [];
-  List<Facultad> _filteredFacultades = [];
+class _DiscapacidadesScreenState extends State<DiscapacidadesScreen> {
+  final DiscapacidadesService _service = DiscapacidadesService();
+  List<Discapacidad> _discapacidades = [];
+  List<Discapacidad> _filteredDiscapacidades = [];
   bool _isLoading = true;
+  String? _error;
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _fetchFacultades();
-    _searchController.addListener(_filterFacultades);
+    _fetchDiscapacidades();
+    _searchController.addListener(_filterDiscapacidades);
   }
 
   @override
   void dispose() {
-    _searchController.removeListener(_filterFacultades);
+    _searchController.removeListener(_filterDiscapacidades);
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchFacultades() async {
+  Future<void> _fetchDiscapacidades() async {
     setState(() {
       _isLoading = true;
+      _error = null;
     });
     try {
-      final data = await _service.obtenerFacultades();
+      final data = await _service.obtenerDiscapacidades();
       setState(() {
-        _facultades = data;
-        _filteredFacultades = data;
+        _discapacidades = data;
+        _filteredDiscapacidades = data;
       });
     } on NetworkException catch (e) {
-      _showErrorSnackBar('Problema de conexión: ${e.message}');
+      _showSnackBar('Problema de conexión: ${e.message}', error: true);
     } on ApiException catch (e) {
-      _showErrorSnackBar('Error: ${e.message}');
+      _showSnackBar('Error: ${e.message}', error: true);
     } catch (e) {
-      _showErrorSnackBar('Error inesperado al cargar facultades.');
+      _showSnackBar('Error inesperado al cargar discapacidades.', error: true);
     } finally {
       setState(() {
         _isLoading = false;
@@ -56,36 +58,41 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
     }
   }
 
-  void _filterFacultades() {
+  void _filterDiscapacidades() {
     final query = _searchController.text.toLowerCase();
     setState(() {
       if (query.isEmpty) {
-        _filteredFacultades = List.from(_facultades);
+        _filteredDiscapacidades = List.from(_discapacidades);
       } else {
-        _filteredFacultades = _facultades.where((facultad) {
-          return facultad.facultad.toLowerCase().contains(query) ||
-              facultad.siglas.toLowerCase().contains(query);
+        _filteredDiscapacidades = _discapacidades.where((discapacidad) {
+          return discapacidad.nombre.toLowerCase().contains(query);
         }).toList();
       }
     });
   }
 
-  void _showForm({Facultad? facultad}) async {
+  void _showForm({Discapacidad? discapacidad}) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => FacultadFormDialog(facultad: facultad),
+      builder: (context) => DiscapacidadFormDialog(discapacidadToEdit: discapacidad),
     );
     if (result == true) {
-      _fetchFacultades();
+      await _fetchDiscapacidades();
+      _showSnackBar(
+        discapacidad == null
+            ? 'Discapacidad agregada correctamente'
+            : 'Discapacidad actualizada correctamente',
+        error: false,
+      );
     }
   }
 
-  void _deleteFacultad(int id) async {
+  void _deleteDiscapacidad(int id) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Eliminar Facultad'),
-        content: const Text('¿Estás seguro de eliminar esta facultad?'),
+        title: const Text('Eliminar Discapacidad'),
+        content: const Text('¿Estás seguro de eliminar esta discapacidad?'),
         actions: [
           TextButton(
             child: const Text('Cancelar'),
@@ -103,22 +110,24 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
     );
     if (confirm == true) {
       try {
-        await _service.eliminarFacultad(id);
-        _fetchFacultades();
+        await _service.eliminarDiscapacidad(id);
+        await _fetchDiscapacidades();
+        _showSnackBar('Discapacidad eliminada correctamente', error: false);
       } on ApiException catch (e) {
-        _showErrorSnackBar('Error: ${e.message}');
+        _showSnackBar('Error: ${e.message}', error: true);
       } catch (e) {
-        _showErrorSnackBar('Error inesperado al eliminar facultad.');
+        _showSnackBar('Error inesperado al eliminar discapacidad.', error: true);
       }
     }
   }
 
-  void _showErrorSnackBar(String message) {
+  // Cambia _showErrorSnackBar a _showSnackBar para mensajes de éxito y error
+  void _showSnackBar(String message, {bool error = false}) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: error ? Colors.red : Colors.green,
         duration: const Duration(seconds: 4),
       ),
     );
@@ -132,7 +141,7 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'FACULTADES',
+          'DISCAPACIDADES',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,
@@ -142,13 +151,13 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refrescar',
-            onPressed: _fetchFacultades,
+            onPressed: _fetchDiscapacidades,
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showForm(),
-        tooltip: 'Agregar Facultad',
+        tooltip: 'Agregar Discapacidad',
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -164,24 +173,24 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
                         width: cardWidth,
                         child: SearchBarWidget(
                           controller: _searchController,
-                          hintText: 'Buscar por nombre o siglas...',
-                          onChanged: (_) => _filterFacultades(),
+                          hintText: 'Buscar por discapacidad...',
+                          onChanged: (_) => _filterDiscapacidades(),
                         ),
                       ),
                     ),
                     const SizedBox(height: 24),
                     Expanded(
-                      child: _filteredFacultades.isEmpty
+                      child: _filteredDiscapacidades.isEmpty
                           ? const Center(
-                              child: Text('No se encontraron facultades.'),
+                              child: Text('No se encontraron discapacidades.'),
                             )
                           : ListView.separated(
-                              itemCount: _filteredFacultades.length,
+                              itemCount: _filteredDiscapacidades.length,
                               separatorBuilder: (_, __) =>
                                   const SizedBox(height: 16),
                               padding: const EdgeInsets.all(16),
                               itemBuilder: (context, index) {
-                                final facultad = _filteredFacultades[index];
+                                final discapacidad = _filteredDiscapacidades[index];
                                 return Center(
                                   child: ConstrainedBox(
                                     constraints: BoxConstraints(
@@ -199,14 +208,11 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
                                         ),
                                         child: ListTile(
                                           leading: const Icon(
-                                            Icons.account_balance,
+                                            Icons.accessible,
                                             size: 36,
                                             color: AppColors.primary,
                                           ),
-                                          title: Text(facultad.facultad),
-                                          subtitle: Text(
-                                            'Siglas: ${facultad.siglas}',
-                                          ),
+                                          title: Text(discapacidad.nombre),
                                           trailing: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
@@ -215,17 +221,16 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
                                                   Icons.edit,
                                                   color: AppColors.primary,
                                                 ),
-                                                onPressed: () => _showForm(
-                                                  facultad: facultad,
-                                                ),
+                                                onPressed: () =>
+                                                    _showForm(discapacidad: discapacidad),
                                               ),
                                               IconButton(
                                                 icon: const Icon(
                                                   Icons.delete,
                                                   color: AppColors.error,
                                                 ),
-                                                onPressed: () => _deleteFacultad(
-                                                  facultad.idFacultad,
+                                                onPressed: () => _deleteDiscapacidad(
+                                                  discapacidad.idDiscapacidad,
                                                 ),
                                               ),
                                             ],
@@ -246,87 +251,34 @@ class _FacultadesScreenState extends State<FacultadesScreen> {
   }
 }
 
-class FacultadFormDialog extends StatefulWidget {
-  final Facultad? facultad;
-  const FacultadFormDialog({super.key, this.facultad});
+// Dialogo para crear/editar discapacidad
+class DiscapacidadFormDialog extends StatefulWidget {
+  final Discapacidad? discapacidadToEdit;
+
+  const DiscapacidadFormDialog({super.key, this.discapacidadToEdit});
 
   @override
-  State<FacultadFormDialog> createState() => _FacultadFormDialogState();
+  State<DiscapacidadFormDialog> createState() => _DiscapacidadFormDialogState();
 }
 
-class _FacultadFormDialogState extends State<FacultadFormDialog> {
+class _DiscapacidadFormDialogState extends State<DiscapacidadFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _facultadController;
-  late TextEditingController _siglasController;
+  final TextEditingController _nombreController = TextEditingController();
   bool _isSaving = false;
   Map<String, List<String>>? _validationErrors;
 
   @override
   void initState() {
     super.initState();
-    _facultadController = TextEditingController(
-      text: widget.facultad?.facultad ?? '',
-    );
-    _siglasController = TextEditingController(
-      text: widget.facultad?.siglas ?? '',
-    );
+    if (widget.discapacidadToEdit != null) {
+      _nombreController.text = widget.discapacidadToEdit!.nombre;
+    }
   }
 
   @override
   void dispose() {
-    _facultadController.dispose();
-    _siglasController.dispose();
+    _nombreController.dispose();
     super.dispose();
-  }
-
-  void _save() async {
-    setState(() {
-      _validationErrors = null;
-    });
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _isSaving = true);
-
-    final service = FacultadesService();
-    try {
-      if (widget.facultad == null) {
-        await service.crearFacultad(
-          _facultadController.text,
-          _siglasController.text,
-        );
-      } else {
-        await service.actualizarFacultad(
-          widget.facultad!.idFacultad,
-          _facultadController.text,
-          _siglasController.text,
-        );
-      }
-      Navigator.pop(context, true);
-    } on ValidationException catch (e) {
-      setState(() {
-        _validationErrors = e.errors;
-      });
-      if (e.errors['general'] != null) {
-        _showErrorSnackBar(e.errors['general']!.join(', '));
-      }
-      _formKey.currentState!.validate();
-    } on ApiException catch (e) {
-      _showErrorSnackBar('Error: ${e.message}');
-    } catch (e) {
-      _showErrorSnackBar('Error inesperado al guardar facultad.');
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 4),
-      ),
-    );
   }
 
   String? _fieldError(String field) {
@@ -336,43 +288,87 @@ class _FacultadFormDialogState extends State<FacultadFormDialog> {
     return null;
   }
 
+  void _showSnackBar(String message, {bool error = false}) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: error ? Colors.red : Colors.green,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    setState(() {
+      _validationErrors = null;
+    });
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _isSaving = true;
+    });
+
+    final service = DiscapacidadesService();
+    try {
+      if (widget.discapacidadToEdit == null) {
+        await service.crearDiscapacidad(_nombreController.text.trim());
+      } else {
+        await service.editarDiscapacidad(
+          widget.discapacidadToEdit!.idDiscapacidad,
+          _nombreController.text.trim(),
+        );
+      }
+      if (mounted) Navigator.pop(context, true);
+    } on ValidationException catch (e) {
+      setState(() {
+        _validationErrors = e.errors;
+      });
+      if (e.errors['general'] != null) {
+        _showSnackBar(e.errors['general']!.join(', '), error: true);
+      }
+      _formKey.currentState!.validate();
+    } on ApiException catch (e) {
+      _showSnackBar('Error: ${e.message}', error: true);
+    } catch (e) {
+      _showSnackBar('Error inesperado al guardar discapacidad.', error: true);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool esEscritorio = MediaQuery.of(context).size.width > 700;
+    final double formWidth = esEscritorio ? 400 : double.infinity;
+
     return AlertDialog(
-      title: Text(
-        widget.facultad == null ? 'Nueva Facultad' : 'Editar Facultad',
-      ),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _facultadController,
-              decoration: const InputDecoration(
-                labelText: 'Nombre de la Facultad',
-                border: OutlineInputBorder(),
+      title: Text(widget.discapacidadToEdit == null ? 'Nueva Discapacidad' : 'Editar Discapacidad'),
+      content: SizedBox(
+        width: formWidth,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                controller: _nombreController,
+                decoration: InputDecoration(
+                  labelText: 'Nombre de la Discapacidad',
+                  border: const OutlineInputBorder(),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 10,
+                    horizontal: 12,
+                  ),
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Campo requerido';
+                  final err = _fieldError('discapacidad');
+                  return err;
+                },
               ),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Campo requerido';
-                final err = _fieldError('facultad');
-                return err;
-              },
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _siglasController,
-              decoration: const InputDecoration(
-                labelText: 'Siglas',
-                border: OutlineInputBorder(),
-              ),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Campo requerido';
-                final err = _fieldError('siglas');
-                return err;
-              },
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [
@@ -390,9 +386,12 @@ class _FacultadFormDialogState extends State<FacultadFormDialog> {
               ? const SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
-              : const Text('Guardar'),
+              : Text(widget.discapacidadToEdit == null ? 'Agregar' : 'Guardar'),
         ),
       ],
     );

@@ -3,6 +3,7 @@ import 'package:smged/api/models/incidencia.dart';
 import 'package:smged/api/services/incidencias_service.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/routes.dart';
+import 'package:smged/layout/widgets/search_bar_widget.dart';
 
 class IncidenciasScreen extends StatefulWidget {
   const IncidenciasScreen({super.key});
@@ -209,7 +210,6 @@ class _IncidenciasScreenState extends State<IncidenciasScreen> {
             tooltip: 'Refrescar',
             onPressed: _fetchIncidencias,
           ),
-          // Puedes quitar este IconButton si solo quieres el FAB
         ],
       ),
       body: _isLoading
@@ -233,19 +233,10 @@ class _IncidenciasScreenState extends State<IncidenciasScreen> {
                       Center(
                         child: ConstrainedBox(
                           constraints: BoxConstraints(maxWidth: cardWidth),
-                          child: TextField(
+                          child: SearchBarWidget(
                             controller: _searchController,
-                            decoration: InputDecoration(
-                              hintText: 'Buscar por estudiante, cédula o descripción...',
-                              prefixIcon: const Icon(Icons.search),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 12.0,
-                                horizontal: 16.0,
-                              ),
-                            ),
+                            hintText: 'Buscar por estudiante, cédula o descripción...',
+                            onChanged: (_) => _filterIncidencias(),
                           ),
                         ),
                       ),

@@ -104,6 +104,7 @@ class _MyAppState extends State<MyApp> {
           primary: AppColors.primary,
         ),
         useMaterial3: true,
+        scaffoldBackgroundColor: AppColors.backgroundSystem, 
         inputDecorationTheme: InputDecorationTheme(
           focusedBorder: OutlineInputBorder(
             borderSide: BorderSide(

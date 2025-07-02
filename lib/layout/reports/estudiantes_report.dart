@@ -9,39 +9,27 @@ import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 
 import 'package:smged/api/models/estudiante.dart';
-// No necesitamos EstudiantesService aquí, ya que recibiremos la lista de estudiantes
-// import 'package:smged/api/services/estudiantes_service.dart';
 
 class EstudiantesReport {
-  static const String _logoPath = 'icon/smged_Logo.png';
+  static const String _logoPath = 'icon/smged_Logo.png'; // Asegúrate de que esta ruta sea correcta
 
   /// Genera y opcionalmente muestra/guarda el reporte PDF de estudiantes.
   ///
   /// [estudiantesToReport]: La lista de estudiantes a incluir en el reporte.
-  ///                      Si se pasa una lista vacía, intentará obtener todos los estudiantes.
-  ///                      Si se pasa un solo estudiante en la lista, generará solo esa página.
   /// [showPreview]: Si es true, abrirá una vista previa del PDF.
   /// [saveToFile]: Si es true, guardará el PDF en el directorio de documentos/descargas.
   /// [shareFile]: Si es true, abrirá el diálogo para compartir el PDF.
+  /// [customFilename]: Nuevo parámetro para nombre de archivo personalizado.
   static Future<void> generateEstudiantesReport({
-    required List<Estudiante> estudiantesToReport, // CAMBIO: Ahora recibe una lista de estudiantes
+    required List<Estudiante> estudiantesToReport,
     bool showPreview = true,
     bool saveToFile = false,
     bool shareFile = false,
-    String? customFilename, // Nuevo parámetro para nombre de archivo personalizado
+    String? customFilename,
   }) async {
-    List<Estudiante> estudiantes;
-
-    // Si se pasa una lista vacía, obtenemos todos los estudiantes (comportamiento original del reporte masivo)
-    // Pero para este caso, siempre se espera que se pase la lista de estudiantes.
     if (estudiantesToReport.isEmpty) {
-      // Si llegara aquí, significa que se llamó sin datos.
-      // Puedes manejarlo como un error o simplemente no generar nada.
-      // Para el propósito de esta solicitud, el modal siempre pasará un estudiante.
       print('La lista de estudiantes para el reporte está vacía.');
       return;
-    } else {
-      estudiantes = estudiantesToReport;
     }
 
     final pdf = pw.Document();
@@ -51,123 +39,129 @@ class EstudiantesReport {
     final Uint8List logoBytes = bytes.buffer.asUint8List();
     final pw.MemoryImage logoImage = pw.MemoryImage(logoBytes);
 
-    // Formateadores de fecha
+    // Formateadores de fecha y hora
     final DateFormat formatter = DateFormat('dd/MM/yyyy');
     final DateFormat dateTimeFormatter = DateFormat('dd/MM/yyyy HH:mm');
+    final String reportGenerationDate = dateTimeFormatter.format(DateTime.now());
 
-    for (var estudiante in estudiantes) {
-      // Para el estado de CONAPDIS
+    // Estilos de texto
+    // ELIMINAR 'const' de aquí
+    final pw.TextStyle titleStyle = pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900);
+    final pw.TextStyle sectionTitleStyle = pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey700);
+    final pw.TextStyle labelStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColors.black);
+    final pw.TextStyle valueStyle = pw.TextStyle(fontSize: 10, color: PdfColors.black);
+    final pw.TextStyle footerStyle = pw.TextStyle(fontSize: 9, color: PdfColors.grey600);
+
+    for (var estudiante in estudiantesToReport) {
       String conapdisEstado = estudiante.poseeConapdis == true
           ? 'Sí'
           : (estudiante.poseeConapdis == false ? 'No' : 'N/A');
 
       pdf.addPage(
         pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          build: (pw.Context context) {
-            return [
-              // Encabezado con Logo y Título
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Container(
-                    width: 70,
-                    height: 70,
-                    decoration: pw.BoxDecoration(
-                      borderRadius: pw.BorderRadius.circular(10),
-                      image: pw.DecorationImage(
-                        image: logoImage,
-                        fit: pw.BoxFit.contain,
+          pageFormat: PdfPageFormat.a4.copyWith(marginTop: 40, marginBottom: 40, marginLeft: 40, marginRight: 40),
+          header: (pw.Context context) {
+            return pw.Column(
+              children: [
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Logo
+                    pw.Container(
+                      width: 60,
+                      height: 60,
+                      child: pw.Image(logoImage),
+                    ),
+                    // Título y Subtítulo
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.center,
+                        children: [
+                          pw.Text(
+                            'Sistema de Gestión Estudiantil y de Discapacidad',
+                            style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600), // Este no era const, no hay problema
+                            textAlign: pw.TextAlign.center,
+                          ),
+                          pw.Text(
+                            'Información Detallada del Estudiante',
+                            style: titleStyle,
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  pw.Expanded(
-                    child: pw.Column(
+                    // Fecha de generación
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
-                        pw.Text(
-                          'Información Detallada del Estudiante', // Título para reporte individual
-                          style: pw.TextStyle(
-                              fontSize: 22, fontWeight: pw.FontWeight.bold),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                        pw.Divider(thickness: 1, color: PdfColors.black),
+                        pw.Text('Reporte Generado:', style: footerStyle),
+                        pw.Text(reportGenerationDate, style: footerStyle),
                       ],
                     ),
-                  ),
-                  pw.SizedBox(width: 70),
-                ],
-              ),
-              pw.SizedBox(height: 30),
-
-              pw.Center(
-                child: pw.Text(
-                  'Datos del Estudiante', // Subtítulo
-                  style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
-                  textAlign: pw.TextAlign.center,
+                  ],
                 ),
+                pw.SizedBox(height: 10),
+                pw.Divider(thickness: 1, color: PdfColors.blueGrey200),
+                pw.SizedBox(height: 20),
+              ],
+            );
+          },
+          footer: (pw.Context context) {
+            return pw.Container(
+              alignment: pw.Alignment.centerRight,
+              margin: const pw.EdgeInsets.only(top: 10.0),
+              child: pw.Text(
+                'Página ${context.pageNumber} de ${context.pagesCount}',
+                style: footerStyle,
               ),
-              pw.SizedBox(height: 20),
+            );
+          },
+          build: (pw.Context context) {
+            return [
+              // Sección de Datos Personales
+              _buildSectionTitle('Datos Personales', sectionTitleStyle),
+              _buildInfoTable([
+                _buildTableRow('Código del Estudiante:', estudiante.idEstudiante?.toString() ?? 'N/A', labelStyle, valueStyle),
+                _buildTableRow('Nombres:', estudiante.nombres, labelStyle, valueStyle),
+                _buildTableRow('Apellidos:', estudiante.apellidos, labelStyle, valueStyle),
+                _buildTableRow('Cédula:', estudiante.cedula, labelStyle, valueStyle),
+                _buildTableRow(
+                  'Fecha de Nacimiento:',
+                  estudiante.fechaNacimiento != null
+                      ? formatter.format(estudiante.fechaNacimiento!)
+                      : 'N/A',
+                  labelStyle, valueStyle,
+                ),
+                _buildTableRow('Correo:', estudiante.correo ?? 'N/A', labelStyle, valueStyle),
+                _buildTableRow('Teléfono Principal:', estudiante.telefono ?? 'N/A', labelStyle, valueStyle),
+                _buildTableRow('Otro Teléfono:', estudiante.otroTelefono ?? 'N/A', labelStyle, valueStyle),
+              ]),
+              _buildMultilineInfo('Dirección:', estudiante.direccion ?? 'N/A', labelStyle, valueStyle),
+              pw.SizedBox(height: 15),
 
-              // Contenido del reporte, imitando la estructura del modal
-              _buildInfoRow(
-                'Código del Estudiante:',
-                estudiante.idEstudiante?.toString() ?? 'N/A',
-              ),
-              _buildInfoRow('Nombres:', estudiante.nombres),
-              _buildInfoRow('Apellidos:', estudiante.apellidos),
-              _buildInfoRow('Cédula:', estudiante.cedula),
-              _buildInfoRow(
-                'Fecha de Nacimiento:',
-                estudiante.fechaNacimiento != null
-                    ? formatter.format(estudiante.fechaNacimiento!)
-                    : 'N/A',
-              ),
-              _buildInfoRow('Correo:', estudiante.correo ?? 'N/A'),
-              _buildInfoRow(
-                'Teléfono Principal:',
-                estudiante.telefono ?? 'N/A',
-              ),
-              _buildInfoRow(
-                'Otro Teléfono:',
-                estudiante.otroTelefono ?? 'N/A',
-              ),
-              _buildMultilineInfo(
-                'Dirección:',
-                estudiante.direccion ?? 'N/A',
-              ),
-              pw.Divider(thickness: 0.5, color: PdfColors.grey),
-              _buildInfoRow(
-                'Discapacidad:',
-                estudiante.discapacidad ?? 'N/A',
-              ),
-              _buildInfoRow(
-                'Carrera:',
-                estudiante.nombreCarrera ?? 'N/A',
-              ),
-              _buildInfoRow(
-                'Facultad:',
-                '${estudiante.nombreFacultad ?? 'N/A'} (${estudiante.siglasFacultad ?? 'N/A'})',
-              ),
-              _buildInfoRow(
-                'Representante:',
-                estudiante.nombreRepre ?? 'N/A',
-              ),
-              pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(vertical: 4.0),
-                child: pw.Row(
-                  children: [
-                    pw.Text(
-                      'Posee CONAPDIS: ',
-                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                    ),
-                    pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+              // Sección Académica y de Discapacidad
+              _buildSectionTitle('Datos Académicos y de Salud', sectionTitleStyle),
+              _buildInfoTable([
+                _buildTableRow('Carrera:', estudiante.nombreCarrera ?? 'N/A', labelStyle, valueStyle),
+                _buildTableRow(
+                  'Facultad:',
+                  '${estudiante.nombreFacultad ?? 'N/A'} (${estudiante.siglasFacultad ?? 'N/A'})',
+                  labelStyle, valueStyle,
+                ),
+                _buildTableRow('Discapacidad:', estudiante.discapacidad ?? 'N/A', labelStyle, valueStyle),
+                pw.TableRow(children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 4.0),
+                    child: pw.Text('Posee CONAPDIS:', style: labelStyle),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 2.0),
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: pw.BoxDecoration(
                         color: estudiante.poseeConapdis == true
                             ? PdfColors.green100
-                            : PdfColors.red100,
+                            : (estudiante.poseeConapdis == false ? PdfColors.red100 : PdfColors.grey200),
                         borderRadius: pw.BorderRadius.circular(5),
                       ),
                       child: pw.Text(
@@ -175,30 +169,39 @@ class EstudiantesReport {
                         style: pw.TextStyle(
                           color: estudiante.poseeConapdis == true
                               ? PdfColors.green900
-                              : PdfColors.red900,
+                              : (estudiante.poseeConapdis == false ? PdfColors.red900 : PdfColors.grey700),
                           fontWeight: pw.FontWeight.bold,
+                          fontSize: valueStyle.fontSize,
                         ),
                       ),
                     ),
-                  ],
+                  ),
+                ]),
+              ]),
+              pw.SizedBox(height: 15),
+
+              // Sección de Observaciones y Seguimiento
+              _buildSectionTitle('Información Adicional', sectionTitleStyle),
+              _buildMultilineInfo('Observaciones:', estudiante.observaciones ?? 'N/A', labelStyle, valueStyle),
+              _buildMultilineInfo('Seguimiento:', estudiante.seguimiento ?? 'N/A', labelStyle, valueStyle),
+              pw.SizedBox(height: 15),
+
+              // Sección de Registro
+              _buildSectionTitle('Detalles de Registro', sectionTitleStyle),
+              _buildInfoTable([
+                _buildTableRow(
+                  'Representante:',
+                  estudiante.nombreRepre ?? 'N/A',
+                  labelStyle, valueStyle,
                 ),
-              ),
-              pw.Divider(thickness: 0.5, color: PdfColors.grey),
-              _buildMultilineInfo(
-                'Observaciones:',
-                estudiante.observaciones ?? 'N/A',
-              ),
-              _buildMultilineInfo(
-                'Seguimiento:',
-                estudiante.seguimiento ?? 'N/A',
-              ),
-              pw.Divider(thickness: 0.5, color: PdfColors.grey),
-              _buildInfoRow(
-                'Fecha de Registro:',
-                estudiante.fechaRegistro != null
-                    ? dateTimeFormatter.format(estudiante.fechaRegistro!)
-                    : 'N/A',
-              ),
+                _buildTableRow(
+                  'Fecha de Registro:',
+                  estudiante.fechaRegistro != null
+                      ? dateTimeFormatter.format(estudiante.fechaRegistro!)
+                      : 'N/A',
+                  labelStyle, valueStyle,
+                ),
+              ]),
             ];
           },
         ),
@@ -206,11 +209,12 @@ class EstudiantesReport {
     }
 
     // --- Opciones de Salida ---
-    final String filename = customFilename ?? 'reporte_estudiantes.pdf'; // Usa nombre personalizado
+    final String filename = customFilename ?? 'reporte_estudiantes.pdf';
 
     if (showPreview) {
       await Printing.layoutPdf(
         onLayout: (PdfPageFormat format) async => pdf.save(),
+        name: filename,
       );
     }
 
@@ -235,37 +239,56 @@ class EstudiantesReport {
     }
   }
 
-  // --- Helpers para construir filas (sin cambios) ---
+  // --- Helpers para construir elementos del PDF ---
 
-  static pw.Widget _buildInfoRow(String label, String value) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 4.0),
-      child: pw.RichText(
-        text: pw.TextSpan(
-          children: [
-            pw.TextSpan(
-              text: '$label ',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11),
-            ),
-            pw.TextSpan(
-              text: value,
-              style: const pw.TextStyle(fontSize: 11),
-            ),
-          ],
-        ),
+  static pw.Widget _buildSectionTitle(String title, pw.TextStyle style) {
+    return pw.Container(
+      alignment: pw.Alignment.centerLeft,
+      padding: const pw.EdgeInsets.only(bottom: 5),
+      decoration: const pw.BoxDecoration(
+        border: pw.Border(bottom: pw.BorderSide(color: PdfColors.blueGrey300, width: 0.5)),
       ),
+      child: pw.Text(title, style: style),
     );
   }
 
-  static pw.Widget _buildMultilineInfo(String label, String value) {
+  static pw.TableRow _buildTableRow(String label, String value, pw.TextStyle labelStyle, pw.TextStyle valueStyle) {
+    return pw.TableRow(
+      verticalAlignment: pw.TableCellVerticalAlignment.top,
+      children: [
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(vertical: 4.0),
+          child: pw.Text(label, style: labelStyle),
+        ),
+        pw.Expanded(
+          child: pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 4.0),
+            child: pw.Text(value, style: valueStyle, softWrap: true),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildInfoTable(List<pw.TableRow> rows) {
+    return pw.Table(
+      columnWidths: {
+        0: const pw.FlexColumnWidth(0.4), // Ancho para la etiqueta
+        1: const pw.FlexColumnWidth(0.6), // Ancho para el valor
+      },
+      children: rows,
+    );
+  }
+
+  static pw.Widget _buildMultilineInfo(String label, String value, pw.TextStyle labelStyle, pw.TextStyle valueStyle) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 4.0),
+      padding: const pw.EdgeInsets.symmetric(vertical: 8.0),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+          pw.Text(label, style: labelStyle),
           pw.SizedBox(height: 4.0),
-          pw.Text(value, softWrap: true, style: const pw.TextStyle(fontSize: 11)),
+          pw.Text(value, softWrap: true, style: valueStyle),
         ],
       ),
     );

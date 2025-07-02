@@ -252,14 +252,17 @@ class _RepresentantesScreenState extends State<RepresentantesScreen> {
                                             textAlign: TextAlign.center,
                                           ),
                                           const SizedBox(height: 18),
-                                          ElevatedButton.icon(
-                                            icon: const Icon(Icons.add),
-                                            label: const Text('Agregar representante'),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: AppColors.primary,
-                                              foregroundColor: Colors.white,
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton.icon(
+                                              icon: const Icon(Icons.add),
+                                              label: const Text('Agregar representante'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppColors.primary,
+                                                foregroundColor: Colors.white,
+                                              ),
+                                              onPressed: _handleAddRepresentante,
                                             ),
-                                            onPressed: _handleAddRepresentante,
                                           ),
                                         ],
                                       ),
@@ -268,28 +271,32 @@ class _RepresentantesScreenState extends State<RepresentantesScreen> {
                                 ),
                               )
                             : ListView.separated(
-                                itemCount: _representantes.length,
+                                itemCount: _representantes.length + 1,
                                 separatorBuilder: (_, __) => const SizedBox(height: 16),
                                 itemBuilder: (context, index) {
-                                  final representante = _representantes[index];
-                                  return _buildRepresentanteCard(representante, cardWidth);
+                                  if (index < _representantes.length) {
+                                    final representante = _representantes[index];
+                                    return _buildRepresentanteCard(representante, cardWidth);
+                                  } else {
+                                    // Botón debajo de la última card y con el mismo ancho
+                                    return Center(
+                                      child: SizedBox(
+                                        width: cardWidth,
+                                        child: ElevatedButton.icon(
+                                          icon: const Icon(Icons.add),
+                                          label: const Text('Agregar representante'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.primary,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          onPressed: _handleAddRepresentante,
+                                        ),
+                                      ),
+                                    );
+                                  }
                                 },
                               ),
                       ),
-                      const SizedBox(height: 18),
-                      if (_representantes.isNotEmpty)
-                        SizedBox(
-                          width: cardWidth,
-                          child: ElevatedButton.icon(
-                            icon: const Icon(Icons.add),
-                            label: const Text('Agregar representante'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                            ),
-                            onPressed: _handleAddRepresentante,
-                          ),
-                        ),
                     ],
                   ),
                 ),

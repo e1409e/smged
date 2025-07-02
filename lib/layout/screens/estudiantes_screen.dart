@@ -350,18 +350,18 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
         label: const Center(child: Text('Acciones')),
         fixedWidth:
             defaultTargetPlatform == TargetPlatform.android ||
-                defaultTargetPlatform == TargetPlatform.iOS
-            ? 130
-            : 150,
+                    defaultTargetPlatform == TargetPlatform.iOS
+                ? 130
+                : 150,
       );
     } else {
       actionColumn = DataColumn2(
         label: const Center(child: Text('Info')),
         fixedWidth:
             defaultTargetPlatform == TargetPlatform.android ||
-                defaultTargetPlatform == TargetPlatform.iOS
-            ? 130 // Más compacto para móvil (solo un botón). Puedes probar 70.
-            : 150, // Mantener para desktop/web
+                    defaultTargetPlatform == TargetPlatform.iOS
+                ? 130 // Más compacto para móvil (solo un botón). Puedes probar 70.
+                : 150, // Mantener para desktop/web
       );
     }
 
@@ -376,7 +376,7 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
         ),
         DataColumn2(
           label: const Text('Nombres'),
-          fixedWidth: 140, // Ajusta según el ancho de nombres
+          fixedWidth: 130, // Ajusta según el ancho de nombres
           onSort: (columnIndex, ascending) => _onSort(columnIndex, ascending),
         ),
 
@@ -448,129 +448,129 @@ class _EstudiantesScreenState extends State<EstudiantesScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: AppColors.error, fontSize: 18),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            )
-          : Padding(
-              padding:
-                  (defaultTargetPlatform == TargetPlatform.android ||
-                      defaultTargetPlatform == TargetPlatform.iOS)
-                  ? const EdgeInsets.all(8.0) // Menos padding general en móvil
-                  : const EdgeInsets.all(15.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SearchBarWidget(
-                    controller: _searchController,
-                    hintText: 'Buscar estudiante por nombre o cédula...',
-                    onChanged: (query) => _filterEstudiantes(),
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: AppColors.error, fontSize: 18),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                  const SizedBox(height: 15.0),
-                  Expanded(
-                    child: Card(
-                      elevation: 8.0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.0),
+                )
+              : Padding(
+                  padding:
+                      (defaultTargetPlatform == TargetPlatform.android ||
+                              defaultTargetPlatform == TargetPlatform.iOS)
+                          ? const EdgeInsets.all(8.0) // Menos padding general en móvil
+                          : const EdgeInsets.all(15.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SearchBarWidget(
+                        controller: _searchController,
+                        hintText: 'Buscar estudiante por nombre o cédula...',
+                        onChanged: (query) => _filterEstudiantes(),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.max,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // ! INICIO DEL CAMBIO: Título "ESTUDIANTES" y Botón de Reporte
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              bottom: 8.0,
-                              top: 8.0,
-                              left: 10.0,
-                              right: 10.0,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'ESTUDIANTES',
-                                  textAlign: TextAlign.left,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.primary,
-                                      ),
+                      const SizedBox(height: 15.0),
+                      Expanded(
+                        child: Card(
+                          // Aquí está el Card que envuelve la tabla
+                          elevation: 8.0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                          color: Colors.white, // <--- Añadir color blanco explícitamente al Card
+                          child: Column(
+                            mainAxisSize: MainAxisSize.max,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // ! INICIO DEL CAMBIO: Título "ESTUDIANTES" y Botón de Reporte
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: 8.0,
+                                  top: 8.0,
+                                  left: 10.0,
+                                  right: 10.0,
                                 ),
-                                Row(
-                                  // Envuelve los botones en otro Row para que estén juntos
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    // Botón para generar el reporte PDF (individual)
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.picture_as_pdf,
-                                        color: AppColors.secondary,
-                                      ),
-                                      onPressed:
-                                          _generateReport, // Este es el reporte individual
-                                      tooltip:
-                                          'Generar Reporte PDF de Estudiantes (Individual)',
+                                    Text(
+                                      'ESTUDIANTES',
+                                      textAlign: TextAlign.left,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.primary,
+                                          ),
                                     ),
-                                    const SizedBox(
-                                      width: 8,
-                                    ), // Pequeña separación entre botones
-                                    // Botón para generar el reporte PDF de lista
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.list_alt,
-                                        color: AppColors.secondary,
-                                      ), // Nuevo ícono para lista
-                                      onPressed:
-                                          _generateListReport, // Este es el reporte de lista
-                                      tooltip:
-                                          'Generar Reporte PDF de Estudiantes (Lista)',
+                                    Row(
+                                      // Envuelve los botones en otro Row para que estén juntos
+                                      children: [
+                                        // Botón para generar el reporte PDF (individual)
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.picture_as_pdf,
+                                            color: AppColors.secondary,
+                                          ),
+                                          onPressed:
+                                              _generateReport, // Este es el reporte individual
+                                          tooltip:
+                                              'Generar Reporte PDF de Estudiantes (Individual)',
+                                        ),
+                                        const SizedBox(
+                                          width: 8,
+                                        ), // Pequeña separación entre botones
+                                        // Botón para generar el reporte PDF de lista
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.list_alt,
+                                            color: AppColors.secondary,
+                                          ), // Nuevo ícono para lista
+                                          onPressed:
+                                              _generateListReport, // Este es el reporte de lista
+                                          tooltip:
+                                              'Generar Reporte PDF de Estudiantes (Lista)',
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              // ! FIN DEL CAMBIO
+                              const Divider(),
+                              Expanded(
+                                child: CustomDataTable<Estudiante>(
+                                  data: _filteredEstudiantes,
+                                  columns: estudianteColumns,
+                                  minWidth:
+                                      (defaultTargetPlatform ==
+                                                  TargetPlatform.android ||
+                                              defaultTargetPlatform ==
+                                                  TargetPlatform.iOS)
+                                          ? 320 // Un ancho mínimo más ajustado para móviles
+                                          : 700, // Mantener para desktop/web
+                                  actionCallbacks: {
+                                    'info': _handleInfoEstudiante,
+                                    'edit': _handleEditEstudiante,
+                                    'delete': _handleDeleteEstudiante,
+                                  },
+                                  sortColumnIndex: _sortColumnIndex,
+                                  sortAscending: _sortAscending,
+                                  rowsPerPage: 10,
+                                  showActions: true,
+                                ),
+                              ),
+                            ],
                           ),
-                          // ! FIN DEL CAMBIO
-                          const Divider(),
-                          Expanded(
-                            child: CustomDataTable<Estudiante>(
-                              data: _filteredEstudiantes,
-                              columns: estudianteColumns,
-                              // --- SOLUCIÓN CLAVE: Ajustar minWidth para móviles ---
-                              minWidth:
-                                  (defaultTargetPlatform ==
-                                          TargetPlatform.android ||
-                                      defaultTargetPlatform ==
-                                          TargetPlatform.iOS)
-                                  ? 320 // Un ancho mínimo más ajustado para móviles
-                                  : 700, // Mantener para desktop/web
-                              // --- Fin de ajuste minWidth ---
-                              actionCallbacks: {
-                                'info': _handleInfoEstudiante,
-                                'edit': _handleEditEstudiante,
-                                'delete': _handleDeleteEstudiante,
-                              },
-                              sortColumnIndex: _sortColumnIndex,
-                              sortAscending: _sortAscending,
-                              rowsPerPage: 10,
-                              showActions: true,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
     );
   }
 }

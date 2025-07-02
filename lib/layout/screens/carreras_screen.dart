@@ -4,6 +4,7 @@ import 'package:smged/api/services/carreras_service.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'forms/carrera_form_screen.dart';
 import 'package:smged/api/exceptions/api_exception.dart';
+import 'package:smged/layout/widgets/search_bar_widget.dart';
 
 class CarrerasScreen extends StatefulWidget {
   const CarrerasScreen({super.key});
@@ -164,19 +165,10 @@ class _CarrerasScreenState extends State<CarrerasScreen> {
                     Center(
                       child: SizedBox(
                         width: cardWidth,
-                        child: TextField(
+                        child: SearchBarWidget(
                           controller: _searchController,
-                          decoration: InputDecoration(
-                            hintText: 'Buscar por carrera o facultad...',
-                            prefixIcon: const Icon(Icons.search),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 12.0,
-                              horizontal: 16.0,
-                            ),
-                          ),
+                          hintText: 'Buscar por carrera o facultad...',
+                          onChanged: (_) => _filterCarreras(),
                         ),
                       ),
                     ),

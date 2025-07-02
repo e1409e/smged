@@ -389,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 const SizedBox(height: 18),
                 Card(
                   elevation: 6,
-                  color: Colors.white70,
+                  color: const Color.fromARGB(206, 253, 251, 251),
                   margin: const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                   child: Padding(

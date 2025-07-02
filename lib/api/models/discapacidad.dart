@@ -14,17 +14,18 @@ class Discapacidad {
     required this.nombre,
   });
 
+  /// Crea una instancia de [Discapacidad] a partir de un mapa JSON.
   factory Discapacidad.fromJson(Map<String, dynamic> json) {
     return Discapacidad(
-      idDiscapacidad: json['discapacidad_id'] as int, // Mapea 'discapacidad_id' del JSON a 'idDiscapacidad'
-      nombre: json['discapacidad'] as String, // Mapea 'discapacidad' del JSON a 'nombre'
+      idDiscapacidad: json['discapacidad_id'] is int
+          ? json['discapacidad_id']
+          : int.parse(json['discapacidad_id'].toString()),
+      nombre: json['discapacidad'] as String,
     );
   }
 
   /// Método para convertir una instancia de [Discapacidad] a un mapa JSON.
   ///
-  /// Esto es útil si necesitas enviar un objeto Discapacidad de vuelta a tu API,
-  /// por ejemplo, para una operación de actualización.
   Map<String, dynamic> toJson() {
     return {
       'discapacidad_id': idDiscapacidad,

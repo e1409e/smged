@@ -1,15 +1,14 @@
 // lib/layout/widgets/custom_data_table.dart
 import 'package:flutter/material.dart';
 import 'package:data_table_2/data_table_2.dart';
-import 'package:smged/layout/widgets/custom_data_table_source.dart'; // Importa la nueva fuente de datos
+import 'package:smged/layout/widgets/custom_data_table_source.dart';
 
 abstract class TableData {
-  int get id; // Necesario para identificar filas únicas
-  // getCells ahora acepta el callback para acciones con un tipo 'dynamic'
+  int get id;
   List<DataCell> getCells(
     BuildContext context,
     List<DataColumn2> currentColumns,
-    Map<String, Function(dynamic item)> actionCallbacks, // Cambiado de nuevo a dynamic
+    Map<String, Function(dynamic item)> actionCallbacks,
   );
 }
 
@@ -20,8 +19,8 @@ class CustomDataTable<T extends TableData> extends StatelessWidget {
   final Map<String, Function(T item)> actionCallbacks;
   final int? sortColumnIndex;
   final bool sortAscending;
-  final int rowsPerPage; // Nuevo parámetro para la paginación
-  final bool showActions; // Nuevo parámetro para mostrar/ocultar los botones de acción del paginador
+  final int rowsPerPage;
+  final bool showActions;
 
   const CustomDataTable({
     super.key,
@@ -31,8 +30,8 @@ class CustomDataTable<T extends TableData> extends StatelessWidget {
     this.minWidth,
     this.sortColumnIndex,
     this.sortAscending = true,
-    this.rowsPerPage = 10, // Valor por defecto
-    this.showActions = true, // Por defecto se muestran los botones de acción
+    this.rowsPerPage = 10,
+    this.showActions = true,
   });
 
   @override
@@ -50,24 +49,32 @@ class CustomDataTable<T extends TableData> extends StatelessWidget {
       data: data,
       columns: columns,
       actionCallbacks: actionCallbacks,
-      context: context, // Pasamos el BuildContext
+      context: context,
     );
 
-    return PaginatedDataTable2(
-      columns: columns,
-      source: source,
-      minWidth: minWidth,
-      sortColumnIndex: sortColumnIndex,
-      sortAscending: sortAscending,
-      rowsPerPage: rowsPerPage,
-      availableRowsPerPage: const [5, 10, 20, 50], // Opciones de filas por página
-      onRowsPerPageChanged: (int? value) {
-        // Puedes agregar lógica aquí para guardar la preferencia del usuario,
-        // o simplemente reconstruir el widget si es necesario.
-        // setState(() => _rowsPerPage = value!); // Si estuvieras en un StatefulWidget
-      },
-      // Puedes personalizar los botones de acción del paginador
-      // actions: showActions ? <Widget>[] : null, // Ejemplo para ocultar acciones
+    return Theme( // <--- Envolvemos con un Theme
+      data: Theme.of(context).copyWith( // Copiamos el tema actual
+        dataTableTheme: DataTableThemeData( // Y definimos el tema para las tablas de datos
+          dataRowColor: MaterialStateProperty.all(Colors.white), // Color de fondo para las filas de datos
+          headingRowColor: MaterialStateProperty.all(Colors.white), // Color de fondo para la fila de encabezado
+          // También puedes ajustar el estilo del texto si es necesario
+          // headingTextStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+          // dataTextStyle: TextStyle(color: Colors.black87),
+        ),
+      ),
+      child: PaginatedDataTable2(
+        columns: columns,
+        source: source,
+        minWidth: minWidth,
+        sortColumnIndex: sortColumnIndex,
+        sortAscending: sortAscending,
+        rowsPerPage: rowsPerPage,
+        availableRowsPerPage: const [5, 10, 20, 50],
+        onRowsPerPageChanged: (int? value) {
+          // Lógica para cambio de filas por página
+        },
+        // Aquí NO usamos dataRowColor ni headingRowColor, se aplican desde el Theme
+      ),
     );
   }
 }

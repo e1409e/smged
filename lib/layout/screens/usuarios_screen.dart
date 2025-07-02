@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:smged/config.dart';
+import 'package:smged/layout/widgets/search_bar_widget.dart';
 
 class UsuariosScreen extends StatefulWidget {
   const UsuariosScreen({super.key});
@@ -414,16 +415,9 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
                         Center(
                           child: SizedBox(
                             width: cardWidth,
-                            child: TextField(
+                            child: SearchBarWidget(
                               controller: _searchController,
-                              decoration: InputDecoration(
-                                hintText: 'Buscar por nombre, apellido o cédula...',
-                                prefixIcon: const Icon(Icons.search),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-                              ),
+                              hintText: 'Buscar por nombre, apellido o cédula...',
                               onChanged: (_) => _filterUsuarios(),
                             ),
                           ),

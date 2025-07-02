@@ -16,6 +16,7 @@ import 'package:smged/layout/screens/reportePsicologico_screen.dart';
 import 'package:smged/layout/screens/forms/reportePsicologico_form_Screen.dart';
 import 'package:smged/layout/screens/representantes_screen.dart';
 import 'package:smged/layout/screens/forms/representantes_form_screen.dart';
+import 'package:smged/layout/screens/discapacidades_screen.dart';
 
 // Clase que importa las rutas
 class AppRoutes {
@@ -43,6 +44,8 @@ class AppRoutes {
   // rutas representantes
   static const String representantesList = '/representantes';
   static const String representanteForm = '/representanteForm';
+  // rutas discapacidades
+  static const String discapacidades = '/discapacidades';
 }
 
 // Esta función solo devuelve un mapa de rutas para navegación INTERNA.
@@ -87,5 +90,8 @@ Map<String, WidgetBuilder> getApplicationRoutes() {
     // Rutas de Representantes
     AppRoutes.representantesList: (BuildContext context) => const RepresentantesScreen(), // idEstudiante debe ser pasado por argumentos
     AppRoutes.representanteForm: (BuildContext context) => const RepresentantesFormScreen(),
+
+    // Rutas de Discapacidades
+    AppRoutes.discapacidades: (BuildContext context) => const DiscapacidadesScreen(),
   };
 }

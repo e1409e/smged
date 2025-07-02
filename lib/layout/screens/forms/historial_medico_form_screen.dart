@@ -72,24 +72,14 @@ class _HistorialMedicoFormScreenState extends State<HistorialMedicoFormScreen> {
         await HistorialMedicoService().editarHistorialMedico(_idHistorialMedico!, historial);
         if (mounted) {
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Historial médico actualizado exitosamente.'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          _showInfoSnackBar('Historial médico actualizado exitosamente.');
           Navigator.of(context).pop(true);
         }
       } else {
         await HistorialMedicoService().crearHistorialMedico(historial);
         if (mounted) {
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Historial médico guardado exitosamente.'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          _showSuccessSnackBar('Historial médico guardado exitosamente.');
           Navigator.of(context).pop(true);
         }
       }
@@ -117,6 +107,29 @@ class _HistorialMedicoFormScreenState extends State<HistorialMedicoFormScreen> {
     }
   }
 
+  // Verde para guardado/eliminación exitosa
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  // Azul para edición exitosa
+  void _showInfoSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.blue,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  // Rojo para errores
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

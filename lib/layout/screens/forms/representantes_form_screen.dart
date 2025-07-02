@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/layout/widgets/custom_dropdown_button.dart';
 import 'package:smged/layout/widgets/custom_dataPickerForm.dart';
@@ -6,6 +7,7 @@ import 'package:smged/api/models/estudiante.dart';
 import 'package:smged/api/models/representante.dart';
 import 'package:smged/api/services/estudiantes_service.dart';
 import 'package:smged/api/services/representantes_service.dart';
+import 'package:smged/api/exceptions/api_exception.dart';
 import 'package:collection/collection.dart';
 
 class RepresentantesFormScreen extends StatefulWidget {
@@ -55,6 +57,11 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
   bool _initialized = false;
   DateTime? _fechaNacimientoDate;
 
+  Map<String, List<String>>? _validationErrors; // Para errores de validación API
+
+  // Reemplaza el campo de cédula por este bloque:
+  String _cedulaPrefix = 'V-';
+
   @override
   void initState() {
     super.initState();
@@ -66,16 +73,22 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Ya no es necesario procesar argumentos aquí, todo viene por el constructor
     if (!_initialized) {
       if (_representanteToEdit != null) {
         _nombreController.text = _representanteToEdit!.nombreRepre;
         _parentescoController.text = _representanteToEdit!.parentesco;
-        _cedulaController.text = _representanteToEdit!.cedulaRepre;
+        if (_representanteToEdit!.cedulaRepre.startsWith('V-')) {
+          _cedulaPrefix = 'V-';
+          _cedulaController.text = _representanteToEdit!.cedulaRepre.substring(2);
+        } else if (_representanteToEdit!.cedulaRepre.startsWith('E-')) {
+          _cedulaPrefix = 'E-';
+          _cedulaController.text = _representanteToEdit!.cedulaRepre.substring(2);
+        } else {
+          _cedulaController.text = _representanteToEdit!.cedulaRepre;
+        }
         _telefonoController.text = _representanteToEdit!.telefonoRepre;
         _correoController.text = _representanteToEdit!.correoRepre;
         _lugarNacimientoController.text = _representanteToEdit!.lugarNacimiento;
-        // Si la fecha viene en formato 'dd/MM/yyyy' o 'yyyy-MM-dd', intenta parsear:
         try {
           _fechaNacimientoDate = DateTime.tryParse(_representanteToEdit!.fechaNacimiento) ??
               _parseFecha(_representanteToEdit!.fechaNacimiento);
@@ -185,7 +198,10 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
       return;
     }
 
-    setState(() => _isSaving = true);
+    setState(() {
+      _isSaving = true;
+      _validationErrors = null;
+    });
 
     try {
       final representantePayload = Representante(
@@ -193,12 +209,12 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
         idEstudiante: _selectedEstudiante!.idEstudiante!,
         nombreRepre: _nombreController.text.trim(),
         parentesco: _parentescoController.text.trim(),
-        cedulaRepre: _cedulaController.text.trim(),
+        cedulaRepre: _cedulaPrefix + _cedulaController.text.trim(),
         telefonoRepre: _telefonoController.text.trim(),
         correoRepre: _correoController.text.trim(),
         lugarNacimiento: _lugarNacimientoController.text.trim(),
         fechaNacimiento: _fechaNacimientoDate != null
-            ? _fechaNacimientoDate!.toIso8601String().split('T').first // 'YYYY-MM-DD'
+            ? _fechaNacimientoDate!.toIso8601String().split('T').first
             : '',
         direccion: _direccionController.text.trim(),
         ocupacion: _ocupacionController.text.trim(),
@@ -230,17 +246,44 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
         ),
       );
       Navigator.of(context).pop(true);
+    } on ValidationException catch (e) {
+      setState(() {
+        _validationErrors = e.errors;
+        _isSaving = false; // <-- Asegúrate de poner esto aquí también
+      });
+      if (e.errors['general'] != null) {
+        _showErrorSnackBar(e.errors['general']!.join(', '));
+      }
+      _formKey.currentState!.validate();
+    } on ApiException catch (e) {
+      setState(() {
+        _isSaving = false;
+      });
+      _showErrorSnackBar('Error: ${e.message}');
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al guardar representante: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
+      setState(() {
+        _isSaving = false;
+      });
+      _showErrorSnackBar('Error inesperado al guardar representante.');
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  String? _fieldError(String field) {
+    if (_validationErrors != null && _validationErrors![field] != null) {
+      return _validationErrors![field]!.join('\n');
+    }
+    return null;
   }
 
   @override
@@ -248,7 +291,6 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
     final bool esEscritorio = MediaQuery.of(context).size.width > 700;
     final double formWidth = esEscritorio ? 500 : double.infinity;
 
-    // Determina si el campo de estudiante debe estar deshabilitado
     final bool estudianteFieldDisabled =
         (_idEstudianteFijoArg != null) || (_representanteToEdit != null);
 
@@ -334,7 +376,8 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
                           if (value == null || value.isEmpty) {
                             return 'Por favor, introduce el nombre.';
                           }
-                          return null;
+                          final err = _fieldError('nombre_repre');
+                          return err;
                         },
                       ),
                       const SizedBox(height: 16.0),
@@ -349,25 +392,60 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
                           if (value == null || value.isEmpty) {
                             return 'Por favor, indica el parentesco.';
                           }
-                          return null;
+                          final err = _fieldError('parentesco');
+                          return err;
                         },
                       ),
                       const SizedBox(height: 16.0),
-                      TextFormField(
-                        controller: _cedulaController,
-                        decoration: const InputDecoration(
-                          labelText: 'Cédula',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.badge),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor, introduce la cédula.';
-                          }
-                          return null;
-                        },
+                      // CÉDULA (igual que en estudiantes, solo números, longitud 7-9)
+                      Row(
+                        children: [
+                          DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _cedulaPrefix,
+                              items: const [
+                                DropdownMenuItem(value: 'V-', child: Text('V-')),
+                                DropdownMenuItem(value: 'E-', child: Text('E-')),
+                              ],
+                              onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                  setState(() {
+                                    _cedulaPrefix = newValue;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8.0),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _cedulaController,
+                              decoration: const InputDecoration(
+                                labelText: 'Cédula',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.badge),
+                              ),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(9),
+                              ],
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Por favor, introduce la cédula.';
+                                }
+                                if (value.length < 7 || value.length > 9) {
+                                  return 'La cédula debe tener entre 7 y 9 dígitos.';
+                                }
+                                final err = _fieldError('cedula_repre');
+                                return err;
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16.0),
+                      // TELÉFONO (solo números, longitud mínima 7, máxima 11)
                       TextFormField(
                         controller: _telefonoController,
                         decoration: const InputDecoration(
@@ -376,8 +454,23 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
                           prefixIcon: Icon(Icons.phone),
                         ),
                         keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(11),
+                        ],
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Por favor, introduce el teléfono.';
+                          }
+                          if (value.length < 7) {
+                            return 'El teléfono debe tener al menos 7 dígitos.';
+                          }
+                          final err = _fieldError('telefono_repre');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 16.0),
+                      // CORREO (debe contener @ si no está vacío)
                       TextFormField(
                         controller: _correoController,
                         decoration: const InputDecoration(
@@ -386,6 +479,13 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
                           prefixIcon: Icon(Icons.email),
                         ),
                         keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty && !value.contains('@')) {
+                            return 'Introduce un correo electrónico válido.';
+                          }
+                          final err = _fieldError('correo_repre');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 16.0),
                       TextFormField(
@@ -395,6 +495,10 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.location_city),
                         ),
+                        validator: (value) {
+                          final err = _fieldError('lugar_nacimiento');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 16.0),
                       DatePickerFormField(
@@ -413,7 +517,8 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
                           if (_fechaNacimientoDate == null) {
                             return 'Por favor, selecciona la fecha de nacimiento.';
                           }
-                          return null;
+                          final err = _fieldError('fecha_nacimiento');
+                          return err;
                         },
                       ),
                       const SizedBox(height: 16.0),
@@ -425,6 +530,10 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
                           prefixIcon: Icon(Icons.home),
                         ),
                         maxLines: 2,
+                        validator: (value) {
+                          final err = _fieldError('direccion');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 16.0),
                       TextFormField(
@@ -434,6 +543,10 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.work),
                         ),
+                        validator: (value) {
+                          final err = _fieldError('ocupacion');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 16.0),
                       TextFormField(
@@ -443,6 +556,10 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.business),
                         ),
+                        validator: (value) {
+                          final err = _fieldError('lugar_trabajo');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 16.0),
                       TextFormField(
@@ -452,6 +569,10 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.map),
                         ),
+                        validator: (value) {
+                          final err = _fieldError('estado');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 16.0),
                       TextFormField(
@@ -461,6 +582,10 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.location_on),
                         ),
+                        validator: (value) {
+                          final err = _fieldError('municipio');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 16.0),
                       TextFormField(
@@ -470,6 +595,10 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.apartment),
                         ),
+                        validator: (value) {
+                          final err = _fieldError('departamento');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 16.0),
                       TextFormField(
@@ -479,6 +608,10 @@ class _RepresentantesFormScreenState extends State<RepresentantesFormScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.group),
                         ),
+                        validator: (value) {
+                          final err = _fieldError('estado_civil');
+                          return err;
+                        },
                       ),
                       const SizedBox(height: 24.0),
                       ElevatedButton.icon(

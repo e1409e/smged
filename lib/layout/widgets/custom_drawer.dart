@@ -9,7 +9,8 @@ import 'package:smged/layout/widgets/custom_colors.dart';
 import 'package:smged/routes.dart' as app_routes;
 
 class CustomDrawer extends StatelessWidget {
-  final VoidCallback onLogout; // El callback de logout que se ejecuta al confirmar
+  final VoidCallback
+  onLogout; // El callback de logout que se ejecuta al confirmar
   final String userName; // Parámetro para el nombre del usuario
   final String userRole; // Parámetro para el rol del usuario
 
@@ -24,7 +25,8 @@ class CustomDrawer extends StatelessWidget {
   void _confirmLogout(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) { // Usamos dialogContext para el diálogo
+      builder: (BuildContext dialogContext) {
+        // Usamos dialogContext para el diálogo
         return AlertDialog(
           title: const Text('Cerrar Sesión'),
           content: const Text('¿Estás seguro de que quieres cerrar tu sesión?'),
@@ -66,17 +68,28 @@ class CustomDrawer extends StatelessWidget {
               children: [
                 const CircleAvatar(
                   radius: 30,
-                  backgroundColor: AppColors.background, // Color de fondo del avatar
-                  child: Icon(Icons.person, size: 30, color: AppColors.primary), // Icono de persona
+                  backgroundColor:
+                      AppColors.background, // Color de fondo del avatar
+                  child: Icon(
+                    Icons.person,
+                    size: 30,
+                    color: AppColors.primary,
+                  ), // Icono de persona
                 ),
-                const SizedBox(height: 10), // Espacio entre el avatar y el texto
+                const SizedBox(
+                  height: 10,
+                ), // Espacio entre el avatar y el texto
                 Text(
                   userName, // ¡Ahora muestra el nombre de usuario pasado como parámetro!
-                  style: TextStyles.title.copyWith(color: AppColors.textTitle), // Estilo de texto del título
+                  style: TextStyles.title.copyWith(
+                    color: AppColors.textTitle,
+                  ), // Estilo de texto del título
                 ),
                 Text(
                   userRole, // ¡Ahora muestra el rol pasado como parámetro!
-                  style: TextStyles.subtitle.copyWith(color: AppColors.textTitle), // Estilo de texto del subtítulo
+                  style: TextStyles.subtitle.copyWith(
+                    color: AppColors.textTitle,
+                  ), // Estilo de texto del subtítulo
                 ),
               ],
             ),
@@ -98,7 +111,10 @@ class CustomDrawer extends StatelessWidget {
             title: const Text('Estudiantes'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
-              Navigator.pushNamed(context, app_routes.AppRoutes.estudiantesList);  // Navega a la ruta de la lista de estudiantes usando la constante
+              Navigator.pushNamed(
+                context,
+                app_routes.AppRoutes.estudiantesList,
+              ); // Navega a la ruta de la lista de estudiantes usando la constante
             },
           ),
 
@@ -108,17 +124,32 @@ class CustomDrawer extends StatelessWidget {
             title: const Text('Citas'),
             onTap: () {
               Navigator.pop(context); // Cierra el Drawer
-              Navigator.pushNamed(context, app_routes.AppRoutes.citasList); // Navega a la ruta de la lista de citas usando la constante
+              Navigator.pushNamed(
+                context,
+                app_routes.AppRoutes.citasList,
+              ); // Navega a la ruta de la lista de citas usando la constante
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.accessible),
+            title: const Text('Discapacidades'),
+            onTap: () {
+              Navigator.pop(context); // Cierra el Drawer
+              Navigator.pushNamed(context, app_routes.AppRoutes.discapacidades);
             },
           ),
 
-
           const Divider(), // Línea divisoria entre opciones
-
           // Opción de Cerrar Sesión
           ListTile(
-            leading: const Icon(Icons.logout, color: AppColors.error), // Icono de logout en color de error
-            title: const Text('Cerrar Sesión', style: TextStyle(color: AppColors.error)), // Texto de logout en color de error
+            leading: const Icon(
+              Icons.logout,
+              color: AppColors.error,
+            ), // Icono de logout en color de error
+            title: const Text(
+              'Cerrar Sesión',
+              style: TextStyle(color: AppColors.error),
+            ), // Texto de logout en color de error
             onTap: () {
               // Cierra el Drawer inmediatamente para una mejor experiencia de usuario
               Navigator.pop(context);
