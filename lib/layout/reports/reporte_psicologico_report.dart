@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:smged/api/models/reporte_psicologico.dart';
 
 class ReportePsicologicoReport {
-  static const String _logoPath = 'icon/smged_Logo.png';
+  static const String _logoPath = 'icon/logo_smged.png';
 
   static Future<void> generateReportePsicologicoPdf({
     required ReportePsicologico reporte,

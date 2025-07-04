@@ -11,7 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:smged/api/models/estudiante.dart';
 
 class EstudiantesReport {
-  static const String _logoPath = 'icon/smged_Logo.png'; // Asegúrate de que esta ruta sea correcta
+  static const String _logoPath = 'icon/logo_smged.png'; // Asegúrate de que esta ruta sea correcta
 
   /// Genera y opcionalmente muestra/guarda el reporte PDF de estudiantes.
   ///

@@ -1,6 +1,6 @@
 name: smged
 description: "Sistema multiplataforma para la gestion de estudiantes con discapacidad."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0
 
 environment:
@@ -9,16 +9,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_localizations: 
+  flutter_localizations:
     sdk: flutter
   http: ^1.2.1
   json_annotation: ^4.8.1
   data_table_2: ^2.5.11
   intl: ^0.20.2
   shared_preferences: ^2.2.0
-  pdf: ^3.11.0 
-  printing: ^5.14.0 
-  path_provider: ^2.1.4 
+  pdf: ^3.11.0
+  printing: ^5.14.0
+  path_provider: ^2.1.4
   url_launcher: ^6.2.5
   file_picker: any
   percent_indicator: ^4.2.3
@@ -28,8 +28,14 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   build_runner: ^2.4.8
   json_serializable: ^6.7.1
-  
+  flutter_launcher_icons: ^0.14.4
+
 flutter:
   uses-material-design: true
   assets:
-    - icon/smged_Logo.png
+    - icon/
+
+flutter_launcher_icons:
+  android: "logo"
+  ios: "logo"
+  image_path: "icon/logo_smged.png"
