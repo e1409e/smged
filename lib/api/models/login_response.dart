@@ -11,7 +11,8 @@ class LoginResponse {
   final String message;
   final bool success;
   final String rol;
-  final int id_usuario; // <-- Debe estar presente
+  final int id_usuario;
+  final String? token; // El token puede ser nulo si la autenticación falla. 
 
   /// Constructor para crear una instancia de LoginResponse.
   LoginResponse({
@@ -19,6 +20,7 @@ class LoginResponse {
     required this.success,
     required this.rol,
     required this.id_usuario,
+    required this.token,
   });
 
   /// Un constructor de fábrica que permite crear una instancia de `LoginResponse`

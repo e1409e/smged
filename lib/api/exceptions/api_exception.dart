@@ -60,6 +60,15 @@ class NetworkException extends ApiException {
   NetworkException(String message, {int? statusCode, dynamic details})
       : super('Problema de conexión: $message', statusCode: statusCode, details: details);
 }
+class UnauthorizedException extends ApiException {
+  UnauthorizedException(String message, {int? statusCode, dynamic details})
+      : super(message, statusCode: statusCode, details: details);
+
+  @override
+  String toString() {
+    return 'Acceso no autorizado: $message. Por favor, inicia sesión de nuevo.';
+  }
+}
 
 /// Excepción para errores generales inesperados
 class UnknownApiException extends ApiException {

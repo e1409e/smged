@@ -5,26 +5,44 @@ import 'package:flutter/foundation.dart' show debugPrint;
 
 import 'package:smged/api/models/estudiante.dart';
 import 'package:smged/config.dart';
-// Importa las nuevas clases de excepción
-import 'package:smged/api/exceptions/api_exception.dart'; 
-
+import 'package:smged/api/exceptions/api_exception.dart';
+import 'package:smged/api/services/auth_service.dart'; // Importa el AuthService
 
 class EstudiantesService {
   static final String _baseUrl = '${Config.apiUrl}/estudiantes';
-  static const Map<String, String> _headers = {'Content-Type': 'application/json'};
+  // Eliminamos _headers estáticos, se generarán dinámicamente.
+  final AuthService _authService = AuthService(); // Instancia de AuthService
+
+  // Función auxiliar para obtener los encabezados con el token
+  Future<Map<String, String>> _getHeaders({bool includeContentType = true}) async {
+    final token = await _authService.getAuthToken();
+    if (token == null || token.isEmpty) {
+      throw UnauthorizedException('No hay token de autenticación disponible. Inicia sesión nuevamente.', statusCode: 401);
+    }
+    final headers = {
+      'Authorization': 'Bearer $token', // ¡Aquí se añade el token!
+    };
+    if (includeContentType) {
+      headers['Content-Type'] = 'application/json';
+    }
+    return headers;
+  }
 
   Future<List<Estudiante>> obtenerTodosLosEstudiantes() async {
     debugPrint('[EstudiantesService] Solicitando todos los estudiantes a: $_baseUrl');
     try {
-      final response = await http.get(Uri.parse(_baseUrl));
-      _handleResponse(response); 
+      final headers = await _getHeaders(includeContentType: false); // GET no necesita Content-Type
+      final response = await http.get(
+        Uri.parse(_baseUrl),
+        headers: headers, // Usar los encabezados con el token
+      );
+      _handleResponse(response);
       final List<dynamic> estudiantesJson = json.decode(utf8.decode(response.bodyBytes));
       return estudiantesJson.map((json) => Estudiante.fromJson(json)).toList();
     } on http.ClientException catch (e) {
       throw NetworkException('Verifica tu conexión a internet o la URL de la API. Detalles: ${e.message}');
     } catch (e) {
-      // Ahora, si la excepción no es una de las nuestras, la envolvemos en UnknownApiException
-      if (e is ApiException) rethrow; // Ya es una excepción de la API, la relanzamos.
+      if (e is ApiException) rethrow;
       throw UnknownApiException('Ha ocurrido un error inesperado al obtener estudiantes: ${e.toString()}');
     }
   }
@@ -32,8 +50,12 @@ class EstudiantesService {
   Future<Estudiante> obtenerEstudiantePorId(int id) async {
     debugPrint('[EstudiantesService] Solicitando estudiante con ID $id a: $_baseUrl/$id');
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/$id'));
-      _handleResponse(response); 
+      final headers = await _getHeaders(includeContentType: false); // GET no necesita Content-Type
+      final response = await http.get(
+        Uri.parse('$_baseUrl/$id'),
+        headers: headers, // Usar los encabezados con el token
+      );
+      _handleResponse(response);
       return Estudiante.fromJson(json.decode(utf8.decode(response.bodyBytes)));
     } on http.ClientException catch (e) {
       throw NetworkException('Verifica tu conexión a internet o la URL de la API. Detalles: ${e.message}');
@@ -44,22 +66,23 @@ class EstudiantesService {
   }
 
   Future<Estudiante> crearEstudiante(Estudiante estudiante) async {
-    final url = Uri.parse('$_baseUrl'); 
+    final url = Uri.parse('$_baseUrl');
     debugPrint('[EstudiantesService] Intentando POST a: $url');
-    
+
     final String requestBody = json.encode(estudiante.toJson());
     debugPrint('[EstudiantesService] Cuerpo de la petición: $requestBody');
 
     try {
+      final headers = await _getHeaders(); // POST sí necesita Content-Type
       final response = await http.post(
         url,
-        headers: _headers, 
-        body: requestBody, 
+        headers: headers, // Usar los encabezados con el token
+        body: requestBody,
       );
 
       debugPrint('[EstudiantesService] Respuesta de la API (Status: ${response.statusCode}): ${utf8.decode(response.bodyBytes)}');
 
-      _handleResponse(response);
+      _handleResponse(response, expectCreated: true); // Esperamos 201
 
       final Map<String, dynamic> responseBody = json.decode(utf8.decode(response.bodyBytes));
       return Estudiante.fromJson(responseBody);
@@ -73,28 +96,33 @@ class EstudiantesService {
 
   Future<Estudiante> actualizarEstudiante(Estudiante estudiante) async {
     if (estudiante.idEstudiante == null) {
-      throw Exception('El ID del estudiante es necesario para actualizar.'); // Puedes cambiar a ApiException si lo prefieres
+      throw ApiException('El ID del estudiante es necesario para actualizar.', statusCode: 400); // Cambiado a ApiException
     }
     final url = Uri.parse('$_baseUrl/${estudiante.idEstudiante}');
     debugPrint('[EstudiantesService] Enviando PUT a: $url');
-    
-    final String requestBody = json.encode(estudiante.toJson()); 
+
+    final String requestBody = json.encode(estudiante.toJson());
     debugPrint('[EstudiantesService] Cuerpo de la solicitud: $requestBody');
 
     try {
+      final headers = await _getHeaders(); // PUT sí necesita Content-Type
       final response = await http.put(
         url,
-        headers: _headers,
+        headers: headers, // Usar los encabezados con el token
         body: requestBody,
       );
 
       debugPrint('[EstudiantesService] Código de estado de la API al actualizar: ${response.statusCode}');
       debugPrint('[EstudiantesService] Cuerpo de la respuesta de la API al actualizar: ${utf8.decode(response.bodyBytes)}');
 
-      _handleResponse(response);
+      _handleResponse(response); // No se espera 201, solo 200-299
 
       debugPrint('[EstudiantesService] Actualización exitosa, obteniendo datos actualizados del estudiante...');
-      return await obtenerEstudiantePorId(estudiante.idEstudiante!);
+      // Retornar el estudiante actualizado desde la respuesta PUT si la API lo devuelve.
+      // Si la API solo devuelve un mensaje de éxito, y la obtención por ID es necesaria
+      // se deja como estaba, pero se prefiere devolver desde la respuesta directa.
+      // Asumimos que la API devuelve el estudiante actualizado.
+      return Estudiante.fromJson(json.decode(utf8.decode(response.bodyBytes)));
 
     } on http.ClientException catch (e) {
       throw NetworkException('Verifica tu conexión a internet o la URL de la API. Detalles: ${e.message}');
@@ -107,16 +135,17 @@ class EstudiantesService {
   Future<void> eliminarEstudiante(int id) async {
     debugPrint('[EstudiantesService] Intentando DELETE para estudiante con ID $id a: $_baseUrl/$id');
     try {
-      final response = await http.delete(Uri.parse('$_baseUrl/$id'));
-      
+      final headers = await _getHeaders(includeContentType: false); // DELETE no necesita Content-Type
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/$id'),
+        headers: headers, // Usar los encabezados con el token
+      );
+
       debugPrint('[EstudiantesService] Código de estado de la API al eliminar: ${response.statusCode}');
       debugPrint('[EstudiantesService] Cuerpo de la respuesta de la API al eliminar: ${utf8.decode(response.bodyBytes)}');
 
-      if (response.statusCode == 200) {
-        return; 
-      } else {
-        _handleResponse(response);
-      }
+      _handleResponse(response); // Manejo de 200/204 centralizado aquí
+
     } on http.ClientException catch (e) {
       throw NetworkException('Verifica tu conexión a internet o la URL de la API. Detalles: ${e.message}');
     } catch (e) {
@@ -127,73 +156,98 @@ class EstudiantesService {
 
   // --- Manejo Centralizado de Respuestas HTTP ---
 
-  void _handleResponse(http.Response response) {
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return; 
-    } 
+  void _handleResponse(http.Response response, {bool expectCreated = false}) {
+    final status = response.statusCode;
+
+    // Si el estado es 200-299 (o 201 si se espera creación), o 204 (No Content para DELETE)
+    if ((expectCreated && status == 201) || (!expectCreated && (status >= 200 && status < 300 || status == 204))) {
+      return;
+    }
 
     String serverMessage = utf8.decode(response.bodyBytes);
     debugPrint('[EstudiantesService] _handleResponse - Raw error body: $serverMessage');
 
+    dynamic errorBody;
     try {
-      final errorBody = json.decode(serverMessage);
-      if (errorBody is Map<String, dynamic>) {
-        if (errorBody.containsKey('errors') && errorBody['errors'] is List) {
-          // Extrae los errores de validación de una forma más estructurada
-          final Map<String, List<String>> validationErrors = {};
-          for (var errorItem in (errorBody['errors'] as List)) {
-            if (errorItem is Map && errorItem.containsKey('path') && errorItem.containsKey('msg')) {
-              final String field = errorItem['path'].toString();
-              final String msg = errorItem['msg'].toString();
-              validationErrors.putIfAbsent(field, () => []).add(msg);
-            }
+      errorBody = json.decode(serverMessage);
+    } catch (_) {
+      // Si no se puede decodificar, es una respuesta inesperada no-JSON
+      throw UnknownApiException('Respuesta inesperada del servidor', statusCode: status, details: serverMessage);
+    }
+
+    // Manejo específico para 401 Unauthorized (añadido aquí)
+    if (status == 401) {
+      throw UnauthorizedException(errorBody['message'] ?? 'Token inválido o expirado. Vuelve a iniciar sesión.', statusCode: status, details: errorBody);
+    }
+
+    if (errorBody is Map<String, dynamic>) {
+      if (errorBody.containsKey('errors') && errorBody['errors'] is List) {
+        // Extrae los errores de validación de una forma más estructurada
+        final Map<String, List<String>> validationErrors = {};
+        for (var errorItem in (errorBody['errors'] as List)) {
+          if (errorItem is Map && errorItem.containsKey('path') && errorItem.containsKey('msg')) {
+            final String field = errorItem['path'].toString();
+            final String msg = errorItem['msg'].toString();
+            validationErrors.putIfAbsent(field, () => []).add(msg);
           }
-          // Lanza la excepción de validación
-          throw ValidationException(
-            'Verifica los campos ingresados.', // Mensaje general para el usuario
-            validationErrors,
-            statusCode: response.statusCode,
+        }
+        // Lanza la excepción de validación
+        throw ValidationException(
+          'Verifica los campos ingresados.', // Mensaje general para el usuario
+          validationErrors,
+          statusCode: status,
+          details: errorBody,
+        );
+      } else if (errorBody.containsKey('error') && errorBody['error'] is String) {
+        // Maneja errores generales de la API (ej. "Estudiante no encontrado")
+        if (status == 404) {
+          throw NotFoundException(
+            errorBody['error'].toString(),
+            statusCode: status,
             details: errorBody,
           );
-        } else if (errorBody.containsKey('error') && errorBody['error'] is String) {
-          // Maneja errores generales de la API (ej. "Estudiante no encontrado")
-          // Puedes personalizar más el mensaje para 404
-          if (response.statusCode == 404) {
-            throw NotFoundException(
-              errorBody['error'].toString(), 
-              statusCode: response.statusCode, 
-              details: errorBody
-            );
-          } else {
-            throw ApiException(
-              errorBody['error'].toString(), 
-              statusCode: response.statusCode, 
-              details: errorBody
-            );
-          }
+        } else if (status >= 500) { // Añadido para manejar ServerException
+          throw ServerException(
+            errorBody['error'].toString(),
+            statusCode: status,
+            details: errorBody,
+          );
         } else {
-          // Si el cuerpo del error es un JSON válido pero no tiene 'error' ni 'errors'
-          throw UnknownApiException(
-            'Respuesta de error inesperada de la API. Por favor, inténtalo de nuevo más tarde.', 
-            statusCode: response.statusCode, 
-            details: errorBody
+          // Si es otro error de API que no es 404 ni 5xx (ej. 400 Bad Request genérico sin 'errors')
+          throw ApiException(
+            errorBody['error'].toString(),
+            statusCode: status,
+            details: errorBody,
+          );
+        }
+      } else if (errorBody.containsKey('message') && errorBody['message'] is String) { // Considera 'message' también para errores
+         if (status >= 500) {
+          throw ServerException(
+            errorBody['message'].toString(),
+            statusCode: status,
+            details: errorBody,
+          );
+        } else {
+          throw ApiException(
+            errorBody['message'].toString(),
+            statusCode: status,
+            details: errorBody,
           );
         }
       } else {
-        // Si el cuerpo del error no es un JSON válido o no es un Map
+        // Si el cuerpo del error es un JSON válido pero no tiene 'error', 'errors' o 'message'
         throw UnknownApiException(
-          'El servidor respondió con un error no reconocido. Por favor, inténtalo de nuevo.', 
-          statusCode: response.statusCode, 
-          details: serverMessage
+          'Respuesta de error inesperada de la API. Por favor, inténtalo de nuevo más tarde.',
+          statusCode: status,
+          details: errorBody,
         );
       }
-    } catch (e) {
-      // Si la decodificación JSON falla o se lanza una excepción de nuestra jerarquía
-      if (e is ApiException) rethrow; // Relanza nuestras excepciones ya manejadas
+    } else {
+      // Si el cuerpo del error no es un JSON válido o no es un Map (por ejemplo, un string plano de error)
       throw UnknownApiException(
-        'No se pudo procesar la respuesta del servidor. Inténtalo de nuevo.', 
-        statusCode: response.statusCode, 
-        details: serverMessage
+        'El servidor respondió con un error no reconocido. Por favor, inténtalo de nuevo.',
+        statusCode: status,
+        details: serverMessage,
       );
     }
   }

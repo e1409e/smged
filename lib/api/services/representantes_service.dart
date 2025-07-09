@@ -3,13 +3,32 @@ import 'package:http/http.dart' as http;
 import 'package:smged/api/models/representante.dart';
 import 'package:smged/config.dart';
 import 'package:smged/api/exceptions/api_exception.dart';
+import 'package:smged/api/services/auth_service.dart'; // Importa el AuthService
 
 class RepresentantesService {
   final String _baseUrl = '${Config.apiUrl}/representantes';
+  final AuthService _authService = AuthService(); // Instancia de AuthService
+
+  // Función auxiliar para obtener los encabezados con el token
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _authService.getAuthToken();
+    if (token == null || token.isEmpty) {
+      // Si no hay token, lanza una excepción que debería ser manejada para forzar el logout
+      throw UnauthorizedException('No hay token de autenticación disponible. Inicia sesión nuevamente.', statusCode: 401);
+    }
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token', // ¡Aquí se añade el token!
+    };
+  }
 
   Future<List<Representante>> obtenerRepresentantes() async {
     try {
-      final response = await http.get(Uri.parse(_baseUrl));
+      final headers = await _getHeaders(); // Obtener encabezados con el token
+      final response = await http.get(
+        Uri.parse(_baseUrl),
+        headers: headers, // Usar los encabezados con el token
+      );
       _handleError(response);
       List<dynamic> jsonList = json.decode(response.body);
       return jsonList.map((json) => Representante.fromJson(json)).toList();
@@ -21,7 +40,11 @@ class RepresentantesService {
 
   Future<Representante> obtenerRepresentantePorId(int id) async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/$id'));
+      final headers = await _getHeaders(); // Obtener encabezados con el token
+      final response = await http.get(
+        Uri.parse('$_baseUrl/$id'),
+        headers: headers, // Usar los encabezados con el token
+      );
       _handleError(response);
       return Representante.fromJson(json.decode(response.body));
     } catch (e) {
@@ -32,7 +55,11 @@ class RepresentantesService {
 
   Future<Representante?> obtenerRepresentantePorEstudiante(int idEstudiante) async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/estudiante/$idEstudiante'));
+      final headers = await _getHeaders(); // Obtener encabezados con el token
+      final response = await http.get(
+        Uri.parse('$_baseUrl/estudiante/$idEstudiante'),
+        headers: headers, // Usar los encabezados con el token
+      );
       if (response.statusCode == 404) {
         return null;
       }
@@ -46,9 +73,10 @@ class RepresentantesService {
 
   Future<void> crearRepresentante(Representante representante) async {
     try {
+      final headers = await _getHeaders(); // Obtener encabezados con el token
       final response = await http.post(
         Uri.parse(_baseUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers, // Usar los encabezados con el token
         body: json.encode(representante.toJson()),
       );
       _handleError(response, expectCreated: true);
@@ -61,9 +89,10 @@ class RepresentantesService {
 
   Future<void> editarRepresentante(int id, Representante representante) async {
     try {
+      final headers = await _getHeaders(); // Obtener encabezados con el token
       final response = await http.put(
         Uri.parse('$_baseUrl/$id'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers, // Usar los encabezados con el token
         body: json.encode(representante.toJson()),
       );
       _handleError(response);
@@ -76,7 +105,11 @@ class RepresentantesService {
 
   Future<void> eliminarRepresentante(int id) async {
     try {
-      final response = await http.delete(Uri.parse('$_baseUrl/$id'));
+      final headers = await _getHeaders(); // Obtener encabezados con el token
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/$id'),
+        headers: headers, // Usar los encabezados con el token
+      );
       _handleError(response);
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -95,6 +128,11 @@ class RepresentantesService {
       body = json.decode(response.body);
     } catch (_) {
       throw UnknownApiException('Respuesta inesperada del servidor', statusCode: status, details: response.body);
+    }
+
+    // Modificación 1: Manejo específico para 401 Unauthorized
+    if (status == 401) {
+      throw UnauthorizedException(body['message'] ?? 'Token inválido o expirado. Vuelve a iniciar sesión.', statusCode: status, details: body);
     }
 
     // Validaciones de express-validator (campo 'errores' o 'errors')

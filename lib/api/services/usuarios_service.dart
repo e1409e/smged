@@ -3,12 +3,33 @@ import 'package:http/http.dart' as http;
 import 'package:smged/api/models/usuario.dart';
 import 'package:smged/config.dart';
 import 'package:smged/api/exceptions/api_exception.dart';
+import 'package:smged/api/services/auth_service.dart'; // Importa el AuthService
 
 class UsuariosService {
   final String _baseUrl = '${Config.apiUrl}/usuarios';
+  final AuthService _authService = AuthService(); // Instancia de AuthService para obtener el token
+
+  // Función auxiliar para obtener los encabezados con el token
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _authService.getAuthToken();
+    if (token == null || token.isEmpty) {
+      // Si no hay token, podemos lanzar una excepción o retornar solo Content-Type
+      // Para servicios que requieren auth, lo mejor es lanzar una excepción.
+      throw UnauthorizedException('No hay token de autenticación disponible. Inicia sesión nuevamente.', statusCode: 401);
+    }
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token', // ¡Aquí se añade el token!
+    };
+  }
 
   Future<List<Usuario>> obtenerUsuarios() async {
-    final response = await http.get(Uri.parse(_baseUrl));
+    final headers = await _getHeaders(); // Obtener encabezados con el token
+    final response = await http.get(
+      Uri.parse(_baseUrl),
+      headers: headers, // Usar los encabezados con el token
+    );
+
     if (response.statusCode == 200) {
       List<dynamic> jsonList = json.decode(response.body);
       return jsonList.map((json) => Usuario.fromJson(json)).toList();
@@ -19,9 +40,10 @@ class UsuariosService {
   }
 
   Future<void> crearUsuario(Usuario usuario, String password) async {
+    final headers = await _getHeaders(); // Obtener encabezados con el token
     final response = await http.post(
       Uri.parse('$_baseUrl/registrar'),
-      headers: {'Content-Type': 'application/json'},
+      headers: headers, // Usar los encabezados con el token
       body: json.encode({
         'nombre': usuario.nombre,
         'apellido': usuario.apellido,
@@ -36,6 +58,7 @@ class UsuariosService {
   }
 
   Future<void> actualizarUsuario(Usuario usuario, {String? password}) async {
+    final headers = await _getHeaders(); // Obtener encabezados con el token
     final body = {
       'nombre': usuario.nombre,
       'apellido': usuario.apellido,
@@ -47,7 +70,7 @@ class UsuariosService {
     }
     final response = await http.put(
       Uri.parse('$_baseUrl/${usuario.idUsuario}'),
-      headers: {'Content-Type': 'application/json'},
+      headers: headers, // Usar los encabezados con el token
       body: json.encode(body),
     );
     if (response.statusCode != 200) {
@@ -56,7 +79,11 @@ class UsuariosService {
   }
 
   Future<void> eliminarUsuario(int idUsuario) async {
-    final response = await http.delete(Uri.parse('$_baseUrl/$idUsuario'));
+    final headers = await _getHeaders(); // Obtener encabezados con el token
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/$idUsuario'),
+      headers: headers, // Usar los encabezados con el token
+    );
     if (response.statusCode != 200) {
       _handleError(response);
     }
@@ -70,6 +97,11 @@ class UsuariosService {
       body = json.decode(response.body);
     } catch (_) {
       throw UnknownApiException('Respuesta inesperada del servidor', statusCode: status, details: response.body);
+    }
+
+    // Modificación 1: Manejo específico para 401 Unauthorized
+    if (status == 401) {
+      throw UnauthorizedException(body['message'] ?? 'Token inválido o expirado. Vuelve a iniciar sesión.', statusCode: status, details: body);
     }
 
     // Validaciones de express-validator (campo 'errores')
