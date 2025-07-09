@@ -9,7 +9,7 @@ allprojects {
 // Configura el directorio de construcción para el proyecto raíz de Android.
 // Esto moverá el directorio 'build' de Android a la raíz de tu proyecto Flutter.
 // Por ejemplo, si tu proyecto Flutter es 'mi_app', el build de Android estará en 'mi_app/build'.
-rootProject.buildDir = file('../build')
+rootProject.buildDir = file("../build")
 
 subprojects {
     project.evaluationDependsOn(":app") // Asegura que 'app' se evalúe primero

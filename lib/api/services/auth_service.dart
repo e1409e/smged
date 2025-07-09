@@ -1,7 +1,7 @@
 // lib/api/services/auth_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint; // Agregado debugPrint
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'dart:io' show Platform;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smged/api/models/login_request.dart';
@@ -15,10 +15,9 @@ class AuthService {
   // Claves para SharedPreferences
   static const String _authTokenKey = 'auth_token';
   static const String _userIdKey = 'userId';
-  // ¡NUEVA CLAVE para el rol de usuario!
   static const String _userRoleKey = 'user_role';
+  static const String _lastActivityTimeKey = 'last_activity_time'; // <-- ¡NUEVA CLAVE!
 
-  // --- NUEVO: Callback para notificar cambios de estado de autenticación ---
   Function(bool isLoggedIn, String? role)? onAuthStatusChanged;
 
   Future<LoginResponse> login(LoginRequest request) async {
@@ -51,12 +50,20 @@ class AuthService {
             await prefs.setInt(_userIdKey, loginResponse.id_usuario);
           }
 
-          // --- MODIFICACIÓN CLAVE: Guardar el rol de usuario ---
+          // Guardar el rol de usuario
           if (loginResponse.rol != null && loginResponse.rol!.isNotEmpty) {
             await prefs.setString(_userRoleKey, loginResponse.rol!);
+          } else {
+            // Si el rol es nulo o vacío, asegúrate de que no quede un rol viejo
+            await prefs.remove(_userRoleKey);
+            debugPrint('[AuthService] Advertencia: Rol de usuario es nulo o vacío en la respuesta de login. No se guarda rol en SP.');
           }
 
-          // --- NUEVO: Notificar a los oyentes que el estado de autenticación cambió (login exitoso) ---
+          // --- Guardar el timestamp del login exitoso ---
+          await prefs.setString(_lastActivityTimeKey, DateTime.now().toIso8601String());
+          debugPrint('[AuthService] Tiempo de última actividad guardado (Login): ${DateTime.now()}');
+
+          // Notificar a los oyentes que el estado de autenticación cambió (login exitoso)
           if (onAuthStatusChanged != null) {
             debugPrint('[AuthService] Login exitoso, notificando cambio de estado.');
             onAuthStatusChanged!(true, loginResponse.rol);
@@ -77,8 +84,6 @@ class AuthService {
           debugPrint('No se pudo decodificar el cuerpo del error como JSON: $e');
         }
 
-        // --- IMPORTANTE: Si el login falla, NO notificar un estado "logueado" ---
-        // El callback solo se llama en éxito. En fallo, la app se mantendrá en estado 'loggedOut'.
         return LoginResponse(
           success: false,
           message: errorMessage,
@@ -111,10 +116,32 @@ class AuthService {
     return prefs.getInt(_userIdKey);
   }
 
-  /// --- NUEVO: Obtiene el rol del usuario logueado de SharedPreferences. ---
+  /// Obtiene el rol del usuario logueado de SharedPreferences.
   Future<String?> getUserRole() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString(_userRoleKey);
+  }
+
+  /// --- NUEVO MÉTODO: Para actualizar el tiempo de actividad ---
+  Future<void> updateLastActivityTime() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastActivityTimeKey, DateTime.now().toIso8601String());
+    debugPrint('[AuthService] Tiempo de última actividad actualizado: ${DateTime.now()}');
+  }
+
+  /// --- NUEVO MÉTODO: Para obtener el tiempo de actividad ---
+  Future<DateTime?> getLastActivityTime() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? timestamp = prefs.getString(_lastActivityTimeKey);
+    if (timestamp != null) {
+      try {
+        return DateTime.parse(timestamp);
+      } catch (e) {
+        debugPrint('[AuthService] Error al parsear last_activity_time: $e');
+        return null;
+      }
+    }
+    return null;
   }
 
   /// Elimina el token de autenticación y el ID de usuario de SharedPreferences.
@@ -123,9 +150,21 @@ class AuthService {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove(_authTokenKey);
     await prefs.remove(_userIdKey);
-    await prefs.remove(_userRoleKey); // --- NUEVO: Eliminar también el rol ---
+    await prefs.remove(_userRoleKey);
+    await prefs.remove(_lastActivityTimeKey); // <-- ¡NUEVO: Eliminar también el timestamp!
 
-    // --- NUEVO: Notificar a los oyentes que el estado de autenticación cambió (logout) ---
+    // --- VERIFICACIÓN DE DEPURACIÓN EXTREMA ---
+    final String? tokenAfterLogout = prefs.getString(_authTokenKey);
+    final String? roleAfterLogout = prefs.getString(_userRoleKey);
+    final String? lastActivityAfterLogout = prefs.getString(_lastActivityTimeKey);
+
+    debugPrint('[AuthService] Verificación POST-LOGOUT:');
+    debugPrint('  - Token: ${tokenAfterLogout == null ? "LIMPIO (null)" : "EXISTE ($tokenAfterLogout)"}');
+    debugPrint('  - Rol: ${roleAfterLogout == null ? "LIMPIO (null)" : "EXISTE ($roleAfterLogout)"}');
+    debugPrint('  - Última Actividad: ${lastActivityAfterLogout == null ? "LIMPIO (null)" : "EXISTE ($lastActivityAfterLogout)"}');
+    // --- FIN VERIFICACIÓN DE DEPURACIÓN EXTREMA ---
+
+    // Notificar a los oyentes que el estado de autenticación cambió (logout)
     if (onAuthStatusChanged != null) {
       debugPrint('[AuthService] Cierre de sesión exitoso, notificando cambio de estado.');
       onAuthStatusChanged!(false, null);

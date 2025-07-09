@@ -29,25 +29,43 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _fetchDashboardData();
   }
 
-  Future<void> _fetchDashboardData() async {
-    setState(() => _isLoading = true);
+Future<void> _fetchDashboardData() async {
+    // Es seguro llamar a setState() aquí porque es la primera línea
+    // y el widget debe estar montado para que esta función sea llamada.
+    if (mounted) { // Es una buena práctica, aunque aquí es menos crítico.
+      setState(() => _isLoading = true);
+    }
+
     try {
       final usuarios = await UsuariosService().obtenerUsuarios();
       final facultades = await FacultadesService().obtenerFacultades();
       final carreras = await CarrerasService().obtenerCarreras();
-      setState(() {
-        _totalUsuarios = usuarios.length;
-        _facultades = facultades;
-        _carreras = carreras;
-      });
+
+      // --- ¡VERIFICACIÓN CRÍTICA! ---
+      // Solo actualiza el estado si el widget sigue en el árbol de widgets.
+      if (mounted) {
+        setState(() {
+          _totalUsuarios = usuarios.length;
+          _facultades = facultades;
+          _carreras = carreras;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _totalUsuarios = 0;
-        _facultades = [];
-        _carreras = [];
-      });
+      debugPrint('Error al cargar datos del dashboard: $e');
+      // --- ¡VERIFICACIÓN CRÍTICA! ---
+      if (mounted) {
+        setState(() {
+          _totalUsuarios = 0;
+          _facultades = [];
+          _carreras = [];
+        });
+      }
     } finally {
-      setState(() => _isLoading = false);
+      // --- ¡VERIFICACIÓN CRÍTICA! ---
+      // Siempre pon _isLoading = false, pero solo si el widget sigue montado.
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
