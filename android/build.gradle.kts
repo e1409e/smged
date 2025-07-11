@@ -1,4 +1,27 @@
-// android/build.gradle
+// android/build.gradle.kts
+// Importar clases necesarias al principio del archivo
+import java.io.FileInputStream
+import java.util.Properties
+
+// Cargar las propiedades del keystore desde key.properties
+// Este bloque debe ir lo más arriba posible para asegurar que las propiedades
+// estén disponibles para los subproyectos (como 'app') cuando sean necesarias.
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+// Configurar las propiedades a nivel de proyecto para que el módulo de la aplicación pueda acceder a ellas.
+// Esto también debe ir temprano para que los subproyectos tengan acceso a estas propiedades.
+subprojects {
+    project.ext.set("MYAPP_UPLOAD_STORE_FILE", keystoreProperties["storeFile"])
+    project.ext.set("MYAPP_UPLOAD_STORE_PASSWORD", keystoreProperties["storePassword"])
+    project.ext.set("MYAPP_UPLOAD_KEY_ALIAS", keystoreProperties["keyAlias"])
+    project.ext.set("MYAPP_UPLOAD_KEY_PASSWORD", keystoreProperties["keyPassword"])
+}
+
+// allprojects block (generalmente para definir repositorios)
 allprojects {
     repositories {
         google()
@@ -7,23 +30,30 @@ allprojects {
 }
 
 // Configura el directorio de construcción para el proyecto raíz de Android.
-// Esto moverá el directorio 'build' de Android a la raíz de tu proyecto Flutter.
-// Por ejemplo, si tu proyecto Flutter es 'mi_app', el build de Android estará en 'mi_app/build'.
 rootProject.buildDir = file("../build")
 
+// El subprojects block para configurar directorios de build internos.
 subprojects {
     project.evaluationDependsOn(":app") // Asegura que 'app' se evalúe primero
-    // Opcional: Si quieres que los subproyectos tengan sus builds dentro del nuevo buildDir raíz.
-    // Esto es común si tienes módulos Gradle en tu proyecto Android.
-    // Si solo tienes un módulo 'app', esta línea puede no ser estrictamente necesaria
-    // para el funcionamiento básico, pero es una buena práctica para proyectos multi-módulo.
     project.buildDir = file("${rootProject.buildDir}/${project.name}")
 }
 
-
+// Tarea clean
 tasks.register<Delete>("clean") {
-    // Esto eliminará el directorio de construcción configurado para el rootProject de Android
-    // que ahora está en la raíz de tu proyecto Flutter (mi_app/build).
-    // También limpiará los subdirectorios de los módulos si la línea de subproject.buildDir se aplica.
     delete(rootProject.buildDir)
 }
+
+// Nota: Las configuraciones de `buildscript { ... }` para las dependencias de classpath
+// (como las versiones de gradle-plugin y kotlin-gradle-plugin) suelen ir al principio
+// del archivo, a veces antes incluso de las importaciones si la plantilla de Gradle lo requiere.
+// Si las tienes, asegúrate de que estén correctamente ubicadas.
+// buildscript {
+//     repositories {
+//         google()
+//         mavenCentral()
+//     }
+//     dependencies {
+//         classpath("com.android.tools.build:gradle:8.x.x") // Ejemplo: Comprueba tu versión real
+//         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.x.x") // Ejemplo: Comprueba tu versión real
+//     }
+// }
